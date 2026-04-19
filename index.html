@@ -488,10 +488,10 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-s
     <div class="panel">
       <div class="panel-hd">
         <span class="panel-title">영수증</span>
-        <button class="btn btn-ghost btn-sm" onclick="show('s1')">+ 업로드</button>
+        <button class="btn btn-ghost btn-sm" onclick="openUploadModal()">+ 업로드</button>
       </div>
       <div class="panel-body">
-        <div class="upload-drop" onclick="show('s1')"><i data-lucide="paperclip" style="width:13px;height:13px;"></i> 드래그하거나 클릭해서 업로드</div>
+        <div class="upload-drop" onclick="openUploadModal()"><i data-lucide="paperclip" style="width:13px;height:13px;"></i> 드래그하거나 클릭해서 업로드</div>
 
         <div class="r-section-lbl">연결됨 · 4장 <span style="font-weight:400; font-size:9px; color:#CCC;">결제 일자순 · 동일 날짜는 시간순</span></div>
 
@@ -779,10 +779,10 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-s
     <div style="font-size:16px; font-weight:800; margin-bottom:4px;">내역 추가</div>
     <div style="font-size:13px; color:#888; margin-bottom:20px;">어떻게 추가할까요?</div>
     <div style="display:flex; flex-direction:column; gap:10px;">
-      <button class="btn" style="padding:16px; background:#FEF2EC; border:1.5px solid #F5C4A8; border-radius:10px; display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer;" onclick="closeAddChoice(); openUploadModal()"
+      <button class="btn" style="padding:16px; background:#FFF8E6; border:1.5px solid #FFE49A; border-radius:10px; display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer; width:100%;" onclick="closeAddChoice(); openUploadModal()">
         <div style="flex-shrink:0; color:#FFC145;"><i data-lucide="camera" style="width:32px;height:32px;stroke-width:1.5;"></i></div>
         <div>
-          <div style="font-size:14px; font-weight:700; color:#E25B45;">영수증 업로드</div>
+          <div style="font-size:14px; font-weight:700; color:#C8950A;">영수증 업로드</div>
           <div style="font-size:12px; color:#AAA; margin-top:2px; font-weight:400;">사진 찍으면 AI가 정보를 자동으로 채워줘요</div>
         </div>
       </button>
@@ -1038,12 +1038,28 @@ function addRow() {
     <td><input style="width:90px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="결제수단"></td>
     <td><input style="width:70px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="결제자"></td>
     <td><input style="width:80px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="이용자"></td>
-    <td style="text-align:center">
-      <span class="r-missing" onclick="openAttach(${n},'새 항목')">미제출</span>
+    <td style="text-align:center; white-space:nowrap;">
+      <button onclick="saveNewRow(${n})" style="padding:3px 10px; background:#FFC145; border:none; border-radius:4px; font-size:11px; font-weight:700; cursor:pointer; margin-right:4px;">저장</button>
+      <button onclick="cancelNewRow(${n})" style="padding:3px 8px; background:#F2F2F2; border:1px solid #E0E0E0; border-radius:4px; font-size:11px; cursor:pointer; color:#888;">✕</button>
     </td>
   `;
   tbody.insertBefore(tr, totalRow);
   tr.querySelector('input[type="text"]') && tr.querySelectorAll('input')[1].focus();
+}
+
+function saveNewRow(n) {
+  const tr = document.getElementById('new-row-' + n);
+  if (!tr) return;
+  const inputs = tr.querySelectorAll('input, select');
+  tr.style.background = '';
+  const lastTd = tr.querySelector('td:last-child');
+  lastTd.innerHTML = '<span class="r-missing" onclick="openAttach(' + n + ',\'새 항목\')">미제출</span>';
+  lucide.createIcons();
+}
+function cancelNewRow(n) {
+  const tr = document.getElementById('new-row-' + n);
+  if (tr) tr.remove();
+  rowCounter--;
 }
 
 function openAttach(num, label) {
