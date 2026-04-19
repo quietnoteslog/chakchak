@@ -1051,7 +1051,18 @@ function addRow() {
     <td><input style="width:90px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="구매처"></td>
     <td><input style="width:100px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="내용"></td>
     <td><input style="width:80px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit; text-align:right;" type="text" placeholder="0"></td>
-    <td><input style="width:90px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="결제수단"></td>
+    <td>
+      <select id="pay-type-${n}" onchange="toggleNewRowCard(this,${n})" style="padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit; background:#fff; width:90px;">
+        <option value="">선택</option>
+        <option value="법인카드">법인카드</option>
+        <option value="개인카드">개인카드</option>
+        <option value="현금">현금</option>
+      </select>
+      <select id="pay-card-${n}" style="display:none; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit; background:#fff; width:130px; margin-top:3px;">
+        <option>신한 법인카드 ****0912</option>
+        <option>KB 법인카드 ****3847</option>
+      </select>
+    </td>
     <td><input style="width:70px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="결제자"></td>
     <td><input style="width:80px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="이용자"></td>
     <td style="text-align:center; white-space:nowrap;">
@@ -1073,7 +1084,11 @@ function saveNewRow(n) {
   const content = cells[4].querySelector('input').value || '—';
   const rawAmt = cells[5].querySelector('input').value.replace(/,/g,'') || '0';
   const amount = parseInt(rawAmt).toLocaleString();
-  const payment = cells[6].querySelector('input').value || '—';
+  const payType = document.getElementById('pay-type-' + n);
+  const payCard = document.getElementById('pay-card-' + n);
+  const payment = payType && payType.value
+    ? (payType.value === '법인카드' && payCard ? payCard.value : payType.value)
+    : '—';
   const payer = cells[7].querySelector('input').value || '—';
   const user = cells[8].querySelector('input').value || '—';
   tr.style.background = '';
@@ -1089,6 +1104,10 @@ function saveNewRow(n) {
     <td style="font-size:11px; color:#AAA;">${user}</td>
     <td style="text-align:center"><span class="r-missing" onclick="openAttach(${n},'${content}')">미제출</span></td>
   `;
+}
+function toggleNewRowCard(sel, n) {
+  const cardSel = document.getElementById('pay-card-' + n);
+  if (cardSel) cardSel.style.display = sel.value === '법인카드' ? 'block' : 'none';
 }
 function cancelNewRow(n) {
   const tr = document.getElementById('new-row-' + n);
