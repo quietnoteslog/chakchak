@@ -343,9 +343,14 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-s
         <span class="badge badge-orange">진행중</span>
       </div>
       <div class="proj-date">2025-05-14 ~ 05-21 · 신유림</div>
-      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
         <span class="badge badge-gray">31건</span>
         <span class="badge badge-red">보관함 3장</span>
+      </div>
+      <div style="display:flex; gap:5px; align-items:center; margin-bottom:6px;">
+        <div style="width:20px;height:20px;border-radius:50%;background:#1A1A1A;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">신</div>
+        <div style="width:20px;height:20px;border-radius:50%;background:#7B61FF;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">김</div>
+        <div style="font-size:11px;color:#AAA;">팀원 2명</div>
       </div>
       <div class="proj-amount">12,345,000원</div>
       <div class="budget-bar-wrap"><div class="budget-bar" style="width:62%;"></div></div>
@@ -357,21 +362,27 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-s
         <span class="badge badge-green">완료</span>
       </div>
       <div class="proj-date">2025-04-02 ~ 04-03 · 김민지</div>
-      <div><span class="badge badge-gray">18건</span></div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px;"><span class="badge badge-gray">18건</span></div>
+      <div style="display:flex; gap:5px; align-items:center; margin-bottom:6px;">
+        <div style="width:20px;height:20px;border-radius:50%;background:#5A9083;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">김</div>
+        <div style="font-size:11px;color:#AAA;">팀원 1명</div>
+      </div>
       <div class="proj-amount">4,820,000원</div>
     </div>
-    <div class="proj-card">
+    <div class="proj-card" style="opacity:.55; cursor:default;" onclick="alert('접근 권한이 없습니다.\n프로젝트 소유자에게 초대를 요청하세요.')">
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div class="proj-name">도쿄 컨퍼런스</div>
-        <span class="badge badge-green">완료</span>
+        <span class="badge badge-gray">완료</span>
       </div>
       <div class="proj-date">2025-03-11 ~ 03-13 · 신유림</div>
-      <div><span class="badge badge-gray">9건</span></div>
-      <div class="proj-amount">2,190,000원</div>
+      <div style="display:flex; gap:6px; align-items:center; margin-top:8px;">
+        <i data-lucide="lock" style="width:13px;height:13px;color:#BBB;"></i>
+        <span style="font-size:12px;color:#BBB;">초대 필요 — 접근 불가</span>
+      </div>
     </div>
-    <div class="proj-card proj-new">
-      <div style="font-size:28px; color:#E25B45;">+</div>
-      <div style="font-size:14px; font-weight:600; color:#E25B45;">새 프로젝트 만들기</div>
+    <div class="proj-card proj-new" onclick="alert('새 프로젝트 만들기 (구현 예정)')">
+      <div style="font-size:28px; color:#FFC145;">+</div>
+      <div style="font-size:14px; font-weight:600; color:#C8950A;">새 프로젝트 만들기</div>
     </div>
   </div>
 </div>
@@ -590,6 +601,11 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-s
 <div class="page-wrap">
   <div class="back-nav" onclick="show('s3')"><i data-lucide="arrow-left" style="width:14px;height:14px;"></i> KCR 2025</div>
   <div class="page-hd"><div class="page-title">팀원 관리</div></div>
+
+  <div style="background:#FFF8E6; border:1px solid #FFE49A; border-radius:8px; padding:10px 14px; font-size:12px; color:#C8950A; margin-bottom:14px; display:flex; gap:8px; align-items:flex-start;">
+    <i data-lucide="shield-check" style="width:15px;height:15px;flex-shrink:0;margin-top:1px;"></i>
+    <div>팀원은 <strong>이 프로젝트(KCR 2025)만</strong> 접근할 수 있어요. 다른 프로젝트는 초대받아야 접근 가능합니다.</div>
+  </div>
 
   <div class="card-box">
     <div class="box-hd">팀원 <span style="color:#AAA; font-weight:400; font-size:13px;">2명</span></div>
@@ -1050,11 +1066,29 @@ function addRow() {
 function saveNewRow(n) {
   const tr = document.getElementById('new-row-' + n);
   if (!tr) return;
-  const inputs = tr.querySelectorAll('input, select');
+  const cells = tr.querySelectorAll('td');
+  const date = cells[1].querySelector('input').value.replace('2025-','').replace('2026-','');
+  const type = cells[2].querySelector('select').value;
+  const vendor = cells[3].querySelector('input').value || '—';
+  const content = cells[4].querySelector('input').value || '—';
+  const rawAmt = cells[5].querySelector('input').value.replace(/,/g,'') || '0';
+  const amount = parseInt(rawAmt).toLocaleString();
+  const payment = cells[6].querySelector('input').value || '—';
+  const payer = cells[7].querySelector('input').value || '—';
+  const user = cells[8].querySelector('input').value || '—';
   tr.style.background = '';
-  const lastTd = tr.querySelector('td:last-child');
-  lastTd.innerHTML = '<span class="r-missing" onclick="openAttach(' + n + ',\'새 항목\')">미제출</span>';
-  lucide.createIcons();
+  tr.innerHTML = `
+    <td>${n}</td>
+    <td>${date}</td>
+    <td>${type}</td>
+    <td>${vendor}</td>
+    <td>${content}</td>
+    <td class="amt">${amount}</td>
+    <td style="font-size:11px; color:#888;">${payment}</td>
+    <td>${payer}</td>
+    <td style="font-size:11px; color:#AAA;">${user}</td>
+    <td style="text-align:center"><span class="r-missing" onclick="openAttach(${n},'${content}')">미제출</span></td>
+  `;
 }
 function cancelNewRow(n) {
   const tr = document.getElementById('new-row-' + n);
