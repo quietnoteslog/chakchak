@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>착착</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #F4F4F2; color: #1A1A1A; }
+
+/* === 상단 네비 === */
+.topnav { display: flex; align-items: center; background: #fff; border-bottom: 1px solid #EBEBEB; padding: 0 24px; height: 52px; position: sticky; top: 0; z-index: 100; }
+.logo { font-size: 22px; font-weight: 900; color: #FFC145; letter-spacing: -1px; margin-right: 32px; cursor: pointer; }
+.nav-tab { padding: 0 18px; height: 52px; line-height: 52px; font-size: 14px; font-weight: 600; cursor: pointer; color: #AAA; border-bottom: 2px solid transparent; transition: all .15s; }
+.nav-tab:hover { color: #1A1A1A; }
+.nav-tab.active { color: #C8950A; border-bottom-color: #FFC145; }
+.nav-right { margin-left: auto; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: #1A1A1A; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+.screen { display: none; }
+.screen.active { display: block; }
+.page-wrap { padding: 20px 24px; max-width: 760px; margin: 0 auto; }
+.page-wrap-wide { padding: 16px 20px; }
+
+.back-nav { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: #AAA; cursor: pointer; margin-bottom: 14px; padding: 4px 0; }
+.back-nav:hover { color: #1A1A1A; }
+
+.page-hd { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+.page-title { font-size: 20px; font-weight: 800; }
+
+/* === 버튼 === */
+.btn { padding: 8px 16px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; display: inline-flex; align-items: center; gap: 5px; }
+.btn-primary { background: #FFC145; color: #1A1A1A; }
+.btn-primary:hover { background: #E5AC30; }
+.btn-secondary { background: #F2F2F2; color: #555; border: 1px solid #E8E8E8; }
+.btn-secondary:hover { background: #E8E8E8; }
+.btn-ghost { background: none; color: #C8950A; border: 1.5px solid #FFC145; }
+.btn-ghost:hover { background: #FFF8E6; border-color: #E5AC30; }
+.btn-sm { padding: 5px 11px; font-size: 12px; }
+
+/* === 배지 (데이터 상태용 — 컬러 유지) === */
+.badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+.badge-green { background: #E8F5F0; color: #3A8870; border: 1px solid #BDE0D4; }
+.badge-orange { background: #FFF8E6; color: #C8950A; border: 1px solid #FFE49A; }
+.badge-gray { background: #F2F2F2; color: #888; border: 1px solid #E8E8E8; }
+.badge-red { background: #FEF0EE; color: #C94D38; border: 1px solid #F5C9B8; }
+
+/* === S1: 업로드 === */
+.upload-area { border: 1.5px dashed #DCDCDC; border-radius: 12px; background: #FAFAFA; padding: 48px 24px; text-align: center; cursor: pointer; transition: all .15s; margin-bottom: 20px; }
+.upload-area:hover { border-color: #1A1A1A; background: #F5F5F5; }
+.field-label { font-size: 11px; color: #888; margin-bottom: 4px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; }
+.field-input { width: 100%; padding: 8px 10px; border: 1px solid #E0E0E0; border-radius: 6px; font-size: 13px; outline: none; font-family: inherit; }
+.field-input:focus { border-color: #1A1A1A; box-shadow: 0 0 0 3px rgba(0,0,0,.06); }
+.field-input.ocr { background: #FFFBF0; border-color: #FFE49A; }
+.field-select { width: 100%; padding: 8px 10px; border: 1px solid #E0E0E0; border-radius: 6px; font-size: 13px; outline: none; font-family: inherit; background: #fff; cursor: pointer; }
+.field-select:focus { border-color: #1A1A1A; }
+.ocr-label { font-size: 10px; color: #C8950A; font-weight: 600; margin-top: 3px; }
+.field-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.preview-card { background: #fff; border-radius: 10px; border: 1px solid #EBEBEB; padding: 20px; display: grid; grid-template-columns: 88px 1fr; gap: 18px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.preview-img { width: 88px; height: 116px; background: linear-gradient(135deg,#F5F5F5,#E8E8E8); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; border: 1px solid #E8E8E8; }
+.preview-fields { display: flex; flex-direction: column; gap: 11px; }
+.checkbox-wrap { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: #F8F8F8; border-radius: 7px; border: 1px solid #EBEBEB; cursor: pointer; }
+.checkbox-wrap input { width: 15px; height: 15px; accent-color: #FFC145; cursor: pointer; }
+.checkbox-wrap label { font-size: 13px; cursor: pointer; font-weight: 600; }
+.pay-opts { display: flex; gap: 7px; margin-top: 4px; }
+.pay-opt { padding: 6px 12px; border: 1px solid #E0E0E0; border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all .15s; color: #888; }
+.pay-opt:hover, .pay-opt.on { border-color: #FFC145; background: #FFC145; color: #1A1A1A; }
+.card-drop { margin-top: 7px; display: none; }
+.card-drop.show { display: block; }
+.card-hint { font-size: 11px; color: #AAA; margin-top: 3px; }
+.card-hint a { color: #1A1A1A; text-decoration: underline; cursor: pointer; }
+
+/* === S2: 프로젝트 목록 === */
+.proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.proj-card { background: #fff; border-radius: 10px; border: 1px solid #EBEBEB; padding: 20px; cursor: pointer; transition: all .15s; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.proj-card:hover { border-color: #1A1A1A; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.proj-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.proj-date { font-size: 12px; color: #AAA; margin-bottom: 10px; }
+.proj-amount { font-size: 14px; font-weight: 700; margin-top: 10px; }
+.budget-bar-wrap { height: 4px; background: #EBEBEB; border-radius: 4px; margin-top: 6px; overflow: hidden; }
+.budget-bar { height: 100%; background: #FFC145; border-radius: 4px; }
+.budget-lbl { font-size: 11px; color: #AAA; margin-top: 3px; }
+.proj-new { background: #FAFAFA; border: 1.5px dashed #DCDCDC; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 148px; }
+.proj-new:hover { border-color: #1A1A1A; background: #F5F5F5; }
+
+/* === S3: 프로젝트 상세 (SPLIT) === */
+.detail-hd { background: #fff; border-radius: 10px; border: 1px solid #EBEBEB; padding: 14px 18px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.detail-name { font-size: 17px; font-weight: 800; }
+.detail-meta { font-size: 12px; color: #999; margin-top: 2px; }
+.stat-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+.stat-b { text-align: right; }
+.stat-lbl { font-size: 11px; color: #AAA; }
+.stat-v { font-size: 14px; font-weight: 700; }
+.detail-btns { display: flex; gap: 7px; flex-wrap: wrap; }
+.split { display: grid; grid-template-columns: 1fr 320px; gap: 14px; height: calc(100vh - 195px); min-height: 480px; }
+
+/* PANEL */
+.panel { background: #fff; border-radius: 10px; border: 1px solid #EBEBEB; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.panel-hd { padding: 11px 14px; border-bottom: 1px solid #EBEBEB; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.panel-title { font-size: 13px; font-weight: 700; }
+.panel-body { flex: 1; overflow-y: auto; }
+
+/* CAT TABS */
+.cat-tabs { display: flex; border-bottom: 1px solid #EBEBEB; background: #FAFAFA; overflow-x: auto; flex-shrink: 0; }
+.ctab { padding: 8px 14px; font-size: 12px; cursor: pointer; color: #AAA; border-bottom: 2px solid transparent; white-space: nowrap; }
+.ctab.active { color: #C8950A; border-bottom-color: #FFC145; font-weight: 700; background: #fff; }
+.ctab.add-tab { color: #888; }
+.ctab.add-tab:hover { color: #1A1A1A; }
+
+/* TABLE */
+.data-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-tbl th { padding: 8px 10px; background: #FAFAFA; font-weight: 600; color: #999; font-size: 11px; border-bottom: 1px solid #EBEBEB; white-space: nowrap; text-align: left; letter-spacing: .3px; }
+.data-tbl td { padding: 7px 10px; border-bottom: 1px solid #F5F5F5; vertical-align: middle; white-space: nowrap; }
+.data-tbl tr:hover td { background: #F8F8F8; cursor: pointer; }
+.data-tbl tr.hl td { background: #F5F5F5; }
+.amt { text-align: right; font-weight: 600; }
+.total-tr td { font-weight: 700; background: #F8F8F8; border-top: 1px solid #EBEBEB; }
+.r-check { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; font-size: 12px; border: 1px solid #E0E0E0; color: #CCC; background: #FAFAFA; transition: all .15s; }
+.r-check.ok { border-color: #FFE49A; color: #C8950A; background: #FFF8E6; }
+.r-check.ok:hover { background: #FFE098; }
+.r-missing { font-size: 11px; font-weight: 700; color: #C94D38; background: #FEF0EE; border: 1px solid #F5C9B8; border-radius: 4px; padding: 3px 7px; cursor: pointer; white-space: nowrap; transition: all .15s; }
+.r-missing:hover { background: #FAD8D0; border-color: #C94D38; }
+.tbl-foot { padding: 9px 12px; background: #FAFAFA; border-top: 1px solid #EBEBEB; flex-shrink: 0; }
+
+/* RIGHT PANEL: 영수증 */
+.r-section-lbl { font-size: 10px; font-weight: 700; color: #BBB; padding: 10px 12px 4px; letter-spacing: .6px; text-transform: uppercase; }
+.r-row { display: flex; align-items: center; gap: 9px; padding: 7px 11px; border-bottom: 1px solid #F5F5F5; cursor: pointer; transition: background .1s; }
+.r-row:hover { background: #F8F8F8; }
+.r-row.hl { background: #F5F5F5; }
+.r-thumb { width: 42px; height: 52px; border-radius: 5px; background: linear-gradient(135deg,#F5F5F5,#E0E0E0); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; border: 1px solid #EBEBEB; }
+.r-thumb.foreign { background: linear-gradient(135deg,#FFF8E6,#FFE49A); border-color: #FFD060; }
+.r-info { flex: 1; min-width: 0; }
+.r-num { font-size: 10px; font-weight: 700; color: #999; }
+.r-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-date { font-size: 11px; color: #AAA; }
+.foreign-tag { font-size: 9px; background: #FFF8E6; color: #C8950A; border-radius: 3px; padding: 1px 4px; font-weight: 700; }
+.upload-drop { margin: 10px 11px; border: 1px dashed #DCDCDC; border-radius: 7px; padding: 12px; text-align: center; cursor: pointer; font-size: 12px; color: #BBB; transition: all .15s; }
+.upload-drop:hover { border-color: #1A1A1A; color: #1A1A1A; background: #F8F8F8; }
+
+/* 보관함 */
+.unassigned-wrap { border-top: 1px solid #EBEBEB; }
+.unassigned-hd { padding: 9px 11px; display: flex; align-items: center; justify-content: space-between; background: #F8F8F8; }
+.unassigned-lbl { font-size: 11px; font-weight: 700; color: #888; }
+.u-row { display: flex; align-items: center; gap: 9px; padding: 7px 11px; border-bottom: 1px solid #F0F0F0; background: #FAFAFA; cursor: pointer; transition: background .1s; }
+.u-row:hover { background: #F5F5F5; }
+.link-btn { font-size: 10px; padding: 3px 7px; background: #F2F2F2; color: #555; border: 1px solid #E0E0E0; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+.link-btn:hover { background: #E8E8E8; color: #1A1A1A; }
+
+/* === 팀원 === */
+.card-box { background: #fff; border-radius: 10px; border: 1px solid #EBEBEB; overflow: hidden; }
+.box-hd { padding: 13px 18px; border-bottom: 1px solid #EBEBEB; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 700; }
+.member-row { display: flex; align-items: center; gap: 12px; padding: 11px 18px; border-bottom: 1px solid #F5F5F5; }
+.m-avatar { width: 34px; height: 34px; border-radius: 50%; background: #1A1A1A; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.m-name { font-size: 13px; font-weight: 600; }
+.m-email { font-size: 11px; color: #AAA; }
+.m-role { font-size: 11px; background: #F2F2F2; color: #666; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+.m-role.owner { background: #FFC145; color: #1A1A1A; }
+.invite-area { padding: 16px 18px; background: #FAFAFA; }
+.invite-row { display: flex; gap: 8px; }
+.invite-input { flex: 1; padding: 8px 12px; border: 1px solid #E0E0E0; border-radius: 7px; font-size: 13px; outline: none; font-family: inherit; }
+.invite-input:focus { border-color: #1A1A1A; }
+.or-line { text-align: center; font-size: 11px; color: #CCC; padding: 8px 0; }
+.link-copy-btn { width: 100%; padding: 10px 14px; background: #F2F2F2; border: 1px solid #E8E8E8; border-radius: 7px; font-size: 12px; cursor: pointer; color: #555; display: flex; align-items: center; justify-content: space-between; font-family: inherit; }
+.link-copy-btn:hover { background: #E8E8E8; }
+.link-copy-btn span.url { color: #AAA; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: left; margin-right: 8px; }
+.pending-row { display: flex; align-items: center; gap: 12px; padding: 11px 18px; border-bottom: 1px solid #F5F5F5; background: #FAFAFA; }
+.pending-badge { font-size: 10px; background: #F2F2F2; color: #888; padding: 2px 7px; border-radius: 4px; font-weight: 700; border: 1px solid #E0E0E0; }
+
+/* === 카드등록 === */
+.card-item-row { display: flex; align-items: center; gap: 12px; padding: 11px 18px; border-bottom: 1px solid #F5F5F5; }
+.card-icon { width: 36px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; font-weight: 700; flex-shrink: 0; }
+
+/* === MODALS === */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+.overlay.show { display: flex; }
+.modal { background: #fff; border-radius: 14px; padding: 24px; width: 100%; position: relative; box-shadow: 0 8px 40px rgba(0,0,0,.18); }
+.modal-close { position: absolute; top: 14px; right: 16px; font-size: 20px; cursor: pointer; color: #CCC; line-height: 1; }
+.modal-close:hover { color: #1A1A1A; }
+
+/* 업로드 완료 모달 */
+.complete-modal { max-width: 340px; text-align: center; }
+.complete-meta { background: #F8F8F8; border: 1px solid #EBEBEB; border-radius: 10px; padding: 12px 16px; margin: 14px 0 18px; text-align: left; font-size: 13px; }
+.cmeta-row { display: flex; justify-content: space-between; padding: 3px 0; }
+.cmeta-lbl { color: #AAA; }
+.cmeta-val { font-weight: 600; }
+
+/* PDF 설정 모달 */
+.pdf-modal { max-width: 400px; }
+.col-toggle-list { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 20px; }
+.col-toggle { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border: 1px solid #E0E0E0; border-radius: 8px; cursor: pointer; transition: all .15s; }
+.col-toggle:hover { border-color: #1A1A1A; background: #F8F8F8; }
+.col-toggle.off { opacity: .4; background: #FAFAFA; }
+.col-toggle-label { font-size: 13px; font-weight: 600; }
+.col-toggle-sub { font-size: 11px; color: #AAA; margin-top: 1px; }
+.toggle-sw { width: 36px; height: 20px; background: #E0E0E0; border-radius: 10px; position: relative; flex-shrink: 0; transition: background .2s; }
+.toggle-sw.on { background: #FFC145; }
+.toggle-sw::after { content:''; position:absolute; width:16px; height:16px; background:#fff; border-radius:50%; top:2px; left:2px; transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.toggle-sw.on::after { left:18px; }
+
+/* 영수증 이미지 모달 */
+.receipt-modal { max-width: 380px; }
+.receipt-modal-img { width: 100%; height: 260px; background: linear-gradient(135deg,#F5F5F5,#E0E0E0); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 60px; margin: 12px 0; }
+.receipt-modal-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; }
+.rm-lbl { color: #AAA; font-size: 11px; }
+.rm-val { font-weight: 600; }
+.lucide { display: inline-block; vertical-align: middle; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+<div class="topnav">
+  <div class="logo" onclick="show('s1')">착착</div>
+  <div class="nav-tab active" id="nt1" onclick="show('s1')">영수증 업로드</div>
+  <div class="nav-tab" id="nt2" onclick="show('s2')">프로젝트</div>
+  <div class="nav-right" style="padding-right:4px;">
+    <div class="avatar" onclick="show('s_cards')">신</div>
+  </div>
+</div>
+
+<!-- ======================================================
+     S1: 영수증 업로드
+====================================================== -->
+<div id="s1" class="screen active">
+<div class="page-wrap">
+  <div class="back-nav" onclick="show(lastScreen || 's2')"><i data-lucide="arrow-left" style="width:14px;height:14px;"></i> 뒤로</div>
+  <div class="page-hd">
+    <div class="page-title">영수증 업로드</div>
+  </div>
+
+  <div id="ub">
+    <div class="upload-area" onclick="doUpload()">
+      <div style="margin-bottom:12px; color:#FFC145;"><i data-lucide="camera" style="width:52px;height:52px;stroke-width:1.5;"></i></div>
+      <div style="font-size:16px; font-weight:700; margin-bottom:6px;">영수증 사진 찍기 또는 파일 선택</div>
+      <div style="font-size:13px; color:#AAA;">JPG, PNG, PDF · AI가 자동으로 정보를 추출해요</div>
+    </div>
+  </div>
+
+  <div id="ua" style="display:none;">
+    <div style="background:#E2F0EC; border-radius:8px; padding:10px 14px; font-size:13px; color:#5A9083; font-weight:600; margin-bottom:14px;">
+      ✓ 업로드 완료 — AI가 정보를 자동 추출했어요. 확인 후 저장하세요.
+    </div>
+    <div class="preview-card">
+      <div class="preview-img">🧾</div>
+      <div class="preview-fields">
+
+        <div class="checkbox-wrap" onclick="toggleForeign(this)">
+          <input type="checkbox" id="fc" onclick="event.stopPropagation()">
+          <label for="fc">🌏 해외 영수증 (번역 + 환율 자동 적용)</label>
+        </div>
+
+        <div class="field-row2">
+          <div>
+            <div class="field-label">거래일자</div>
+            <input class="field-input ocr" type="text" value="2025-05-17">
+            <div class="ocr-label">AI 자동 추출</div>
+          </div>
+          <div>
+            <div class="field-label">금액</div>
+            <input class="field-input ocr" type="text" value="85,000">
+            <div class="ocr-label">AI 자동 추출</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="field-label">구매처</div>
+          <input class="field-input ocr" type="text" value="삼성역 포차">
+          <div class="ocr-label">AI 자동 추출</div>
+        </div>
+
+        <div class="field-row2">
+          <div>
+            <div class="field-label">내용</div>
+            <input class="field-input" type="text" placeholder="예: 식대, 교통비...">
+          </div>
+          <div>
+            <div class="field-label">구분</div>
+            <select class="field-select">
+              <option>영수증</option><option>세금계산서</option><option>간이영수증</option><option>견적서</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <div class="field-label">결제수단</div>
+          <div class="pay-opts">
+            <div class="pay-opt on" onclick="setPay(this,'corp')">법인카드</div>
+            <div class="pay-opt" onclick="setPay(this,'personal')">개인카드</div>
+            <div class="pay-opt" onclick="setPay(this,'cash')">현금</div>
+          </div>
+          <div class="card-drop show" id="cardDrop">
+            <select class="field-select" style="margin-top:6px;">
+              <option>신한 법인카드 ****0912</option>
+              <option>KB 법인카드 ****3847</option>
+            </select>
+            <div class="card-hint">없으면 <a onclick="show('s_cards')">카드 등록</a>에서 추가하세요.</div>
+          </div>
+        </div>
+
+        <div class="field-row2">
+          <div>
+            <div class="field-label">결제자</div>
+            <input class="field-input" type="text" value="신유림">
+          </div>
+          <div>
+            <div class="field-label">이용자 <span style="font-size:10px; color:#CCC; font-weight:400;">(선택)</span></div>
+            <input class="field-input" type="text" placeholder="예: 신유림 외 4명">
+          </div>
+        </div>
+
+        <div>
+          <div class="field-label">프로젝트 배정 (선택)</div>
+          <select class="field-select" id="projSelect">
+            <option value="">— 나중에 배정</option>
+            <option value="kcr">KCR 2025</option>
+            <option value="ad">광고주 A사 런칭 행사</option>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary" onclick="doSave()" style="flex:1;">저장</button>
+          <button class="btn btn-secondary" onclick="resetUpload()">취소</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ======================================================
+     S2: 프로젝트 목록
+====================================================== -->
+<div id="s2" class="screen">
+<div class="page-wrap" style="max-width:920px;">
+  <div class="page-hd">
+    <div class="page-title">프로젝트</div>
+    <button class="btn btn-primary btn-sm">+ 새 프로젝트</button>
+  </div>
+  <div class="proj-grid">
+    <div class="proj-card" onclick="show('s3')">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div class="proj-name">KCR 2025</div>
+        <span class="badge badge-orange">진행중</span>
+      </div>
+      <div class="proj-date">2025-05-14 ~ 05-21 · 신유림</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <span class="badge badge-gray">31건</span>
+        <span class="badge badge-red">보관함 3장</span>
+      </div>
+      <div class="proj-amount">12,345,000원</div>
+      <div class="budget-bar-wrap"><div class="budget-bar" style="width:62%;"></div></div>
+      <div class="budget-lbl">예산 20,000,000원 중 62% 사용</div>
+    </div>
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div class="proj-name">광고주 A사 런칭 행사</div>
+        <span class="badge badge-green">완료</span>
+      </div>
+      <div class="proj-date">2025-04-02 ~ 04-03 · 김민지</div>
+      <div><span class="badge badge-gray">18건</span></div>
+      <div class="proj-amount">4,820,000원</div>
+    </div>
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div class="proj-name">도쿄 컨퍼런스</div>
+        <span class="badge badge-green">완료</span>
+      </div>
+      <div class="proj-date">2025-03-11 ~ 03-13 · 신유림</div>
+      <div><span class="badge badge-gray">9건</span></div>
+      <div class="proj-amount">2,190,000원</div>
+    </div>
+    <div class="proj-card proj-new">
+      <div style="font-size:28px; color:#E25B45;">+</div>
+      <div style="font-size:14px; font-weight:600; color:#E25B45;">새 프로젝트 만들기</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ======================================================
+     S3: 프로젝트 상세 (SPLIT)
+====================================================== -->
+<div id="s3" class="screen">
+<div class="page-wrap-wide">
+  <div class="back-nav" onclick="show('s2')"><i data-lucide="arrow-left" style="width:14px;height:14px;"></i> 프로젝트 목록</div>
+
+  <div class="detail-hd">
+    <div>
+      <div class="detail-name">KCR 2025</div>
+      <div class="detail-meta">2025-05-14 ~ 05-21 · 신유림</div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-b"><div class="stat-lbl">총 내역</div><div class="stat-v">31건</div></div>
+      <div class="stat-b"><div class="stat-lbl">총 금액</div><div class="stat-v">12,345,000원</div></div>
+      <div class="stat-b">
+        <div class="stat-lbl">예산</div>
+        <div class="stat-v" style="color:#E25B45;">20,000,000원</div>
+        <div style="font-size:11px; color:#5A9083;">▼ 7,655,000원 남음</div>
+      </div>
+    </div>
+    <div class="detail-btns">
+      <button class="btn btn-secondary btn-sm" onclick="show('s3_team')">👥 팀원</button>
+      <button class="btn btn-secondary btn-sm">공유 링크</button>
+      <button class="btn btn-secondary btn-sm">PDF 미리보기</button>
+      <button class="btn btn-primary btn-sm" onclick="openPdfModal()">PDF 다운로드</button>
+    </div>
+  </div>
+
+  <div class="split">
+    <!-- LEFT: 항목 테이블 -->
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title">항목 입력</span>
+        <button class="btn btn-primary btn-sm" onclick="openAddChoice()">+ 내역 추가</button>
+      </div>
+      <div class="cat-tabs">
+        <div class="ctab active">현장 운영비</div>
+        <div class="ctab">사전 운영비</div>
+        <div class="ctab">소모품비</div>
+        <div class="ctab">기타</div>
+        <div class="ctab add-tab">+ 탭 추가</div>
+      </div>
+      <div class="panel-body">
+        <div style="overflow-x:auto;">
+          <table class="data-tbl">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>거래일자</th>
+                <th>구분</th>
+                <th>구매처</th>
+                <th>내용</th>
+                <th style="text-align:right">금액</th>
+                <th>결제수단</th>
+                <th>결제자</th>
+                <th>이용자</th>
+                <th style="text-align:center">영수증</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="hl">
+                <td>1</td><td>05-14</td><td>영수증</td><td>삼성역 포차</td><td>식대 (저녁)</td>
+                <td class="amt">85,000</td><td style="color:#E25B45; font-size:11px;">신한법인 ****0912</td><td>신유림</td><td style="font-size:11px; color:#888;">신유림 외 4명</td>
+                <td style="text-align:center"><span class="r-check ok" onclick="openReceipt('식대(저녁)','삼성역 포차','85,000','🧾','신한 법인카드 ****0912')">✓</span></td>
+              </tr>
+              <tr>
+                <td>2</td><td>05-14</td><td>영수증</td><td>삼우인쇄</td><td>현장 인쇄물</td>
+                <td class="amt">320,000</td><td style="color:#E25B45; font-size:11px;">신한법인 ****0912</td><td>신유림</td><td style="font-size:11px; color:#CCC;">—</td>
+                <td style="text-align:center"><span class="r-check ok" onclick="openReceipt('현장 인쇄물','삼우인쇄','320,000','🖨️','신한 법인카드 ****0912')">✓</span></td>
+              </tr>
+              <tr>
+                <td>3</td><td>05-15</td><td>세금계산서</td><td>(주)사운드하우스</td><td>음향 장비 렌탈</td>
+                <td class="amt">1,200,000</td><td style="font-size:11px;">현금</td><td>김민지</td><td style="font-size:11px; color:#CCC;">—</td>
+                <td style="text-align:center"><span class="r-check ok" onclick="openReceipt('음향 장비 렌탈','(주)사운드하우스','1,200,000','🔊','현금')">✓</span></td>
+              </tr>
+              <tr>
+                <td>4</td><td>05-15</td><td>영수증</td><td>—</td><td>교통비</td>
+                <td class="amt">42,500</td><td style="color:#7B61FF; font-size:11px;">KB법인 ****3847</td><td>신유림</td><td style="font-size:11px; color:#CCC;">—</td>
+                <td style="text-align:center"><span class="r-missing" onclick="openAttach(4,'교통비')">미제출</span></td>
+              </tr>
+              <tr>
+                <td>5</td><td>05-16</td><td>간이영수증</td><td>GS25 삼성점</td><td>식대 (점심)</td>
+                <td class="amt">67,000</td><td style="font-size:11px; color:#888;">개인카드</td><td>박준호</td><td style="font-size:11px; color:#888;">신유림, 김민지, 박준호</td>
+                <td style="text-align:center"><span class="r-missing" onclick="openAttach(5,'식대 (점심)')">미제출</span></td>
+              </tr>
+              <tr>
+                <td>6</td><td>05-17</td><td>영수증</td><td>Tokyo Taxi</td><td>택시 (도쿄→빅사이트)</td>
+                <td class="amt">60,300</td><td style="color:#7B61FF; font-size:11px;">KB법인 ****3847</td><td>신유림</td><td style="font-size:11px; color:#CCC;">—</td>
+                <td style="text-align:center"><span class="r-check ok" onclick="openReceipt('택시(도쿄)','Tokyo Taxi','60,300원 (¥5,300)','🌏','KB 법인카드 ****3847')">✓</span></td>
+              </tr>
+              <tr>
+                <td colspan="9" style="text-align:center; color:#DDD; font-size:12px; padding:8px;">... 25행 더 ...</td>
+              </tr>
+              <tr class="total-tr">
+                <td colspan="5" style="color:#888; font-size:11px;">현장 운영비 합계</td>
+                <td class="amt">1,774,800</td><td colspan="3"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tbl-foot">
+        <span style="font-size:11px; color:#AAA;">✓ 초록 = 영수증 첨부됨 · <span style="color:#E25B45;">미제출</span> = 미첨부 (클릭해서 첨부)</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: 영수증 패널 (항목 순서 일치) -->
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title">영수증</span>
+        <button class="btn btn-ghost btn-sm" onclick="show('s1')">+ 업로드</button>
+      </div>
+      <div class="panel-body">
+        <div class="upload-drop" onclick="show('s1')"><i data-lucide="paperclip" style="width:13px;height:13px;"></i> 드래그하거나 클릭해서 업로드</div>
+
+        <div class="r-section-lbl">연결됨 · 4장 <span style="font-weight:400; font-size:9px; color:#CCC;">결제 일자순 · 동일 날짜는 시간순</span></div>
+
+        <div class="r-row hl" onclick="openReceipt('식대(저녁)','삼성역 포차','85,000','🧾','신한 법인카드')">
+          <div class="r-thumb">🧾</div>
+          <div class="r-info">
+            <div class="r-num">#1 식대 (저녁)</div>
+            <div class="r-name">receipt_0514_1.jpg</div>
+            <div class="r-date">05-14</div>
+          </div>
+        </div>
+        <div class="r-row" onclick="openReceipt('현장 인쇄물','삼우인쇄','320,000','🖨️','신한 법인카드')">
+          <div class="r-thumb">🖨️</div>
+          <div class="r-info">
+            <div class="r-num">#2 현장 인쇄물</div>
+            <div class="r-name">receipt_0514_2.jpg</div>
+            <div class="r-date">05-14</div>
+          </div>
+        </div>
+        <div class="r-row" onclick="openReceipt('음향 장비 렌탈','(주)사운드하우스','1,200,000','🔊','현금')">
+          <div class="r-thumb">🔊</div>
+          <div class="r-info">
+            <div class="r-num">#3 음향 장비 렌탈</div>
+            <div class="r-name">receipt_sound.jpg</div>
+            <div class="r-date">05-15</div>
+          </div>
+        </div>
+        <!-- #4, #5: 미제출 -->
+        <div class="r-row" style="border: 1.5px dashed #F5C4A8; border-radius:8px; margin:4px 8px; background:#FEF7F3;" onclick="openAttach(4,'교통비')">
+          <div class="r-thumb" style="border: 1.5px dashed #F5C4A8; background:#FEF2EC; color:#E25B45; font-size:18px;">+</div>
+          <div class="r-info">
+            <div class="r-num">#4 교통비</div>
+            <div class="r-name" style="color:#E25B45; font-size:11px;">미제출 — 클릭해서 첨부</div>
+          </div>
+        </div>
+        <div class="r-row" style="border: 1.5px dashed #F5C4A8; border-radius:8px; margin:4px 8px; background:#FEF7F3;" onclick="openAttach(5,'식대 (점심)')">
+          <div class="r-thumb" style="border: 1.5px dashed #F5C4A8; background:#FEF2EC; color:#E25B45; font-size:18px;">+</div>
+          <div class="r-info">
+            <div class="r-num">#5 식대 (점심)</div>
+            <div class="r-name" style="color:#E25B45; font-size:11px;">미제출 — 클릭해서 첨부</div>
+          </div>
+        </div>
+        <div class="r-row" onclick="openReceipt('택시(도쿄)','Tokyo Taxi','60,300','🌏','KB 법인카드')">
+          <div class="r-thumb foreign">🌏</div>
+          <div class="r-info">
+            <div class="r-num">#6 택시 (도쿄)</div>
+            <div class="r-name">overseas_taxi.jpg</div>
+            <div class="r-date">05-17 <span class="foreign-tag">해외·OCR</span></div>
+          </div>
+        </div>
+
+        <!-- 미배정 보관함 (전역 — 프로젝트 미지정으로 업로드된 영수증) -->
+        <div class="unassigned-wrap">
+          <div class="unassigned-hd">
+            <div>
+              <div class="unassigned-lbl"><i data-lucide="folder-open" style="width:12px;height:12px;"></i> 보관함 · 3장</div>
+              <div style="font-size:10px; color:#C8A020; margin-top:2px;">프로젝트 미지정 업로드 · 결제 일자순</div>
+            </div>
+            <button class="btn btn-sm" style="background:#FEF2EC; color:#E25B45; border:1px solid #F5C4A8; font-size:11px;" onclick="show('s1')">+ 업로드</button>
+          </div>
+          <div class="u-row" onclick="openReceipt('보관함','—','—','🧾','')">
+            <div class="r-thumb" style="background:linear-gradient(135deg,#FFFBEA,#FFF0CC);">🧾</div>
+            <div class="r-info">
+              <div class="r-name">receipt_0516.jpg</div>
+              <div class="r-date">05-16</div>
+            </div>
+            <div class="link-btn">항목 연결</div>
+          </div>
+          <div class="u-row" onclick="openReceipt('보관함','—','—','🧾','')">
+            <div class="r-thumb" style="background:linear-gradient(135deg,#FFFBEA,#FFF0CC);">🧾</div>
+            <div class="r-info">
+              <div class="r-name">receipt_0517_a.jpg</div>
+              <div class="r-date">05-17</div>
+            </div>
+            <div class="link-btn">항목 연결</div>
+          </div>
+          <div class="u-row">
+            <div class="r-thumb foreign" style="font-size:16px;">🌏</div>
+            <div class="r-info">
+              <div class="r-name">overseas_hotel.jpg</div>
+              <div class="r-date">05-17 <span class="foreign-tag">해외·OCR</span></div>
+            </div>
+            <div class="link-btn">항목 연결</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ======================================================
+     S3_TEAM: 팀원 관리
+====================================================== -->
+<div id="s3_team" class="screen">
+<div class="page-wrap">
+  <div class="back-nav" onclick="show('s3')"><i data-lucide="arrow-left" style="width:14px;height:14px;"></i> KCR 2025</div>
+  <div class="page-hd"><div class="page-title">팀원 관리</div></div>
+
+  <div class="card-box">
+    <div class="box-hd">팀원 <span style="color:#AAA; font-weight:400; font-size:13px;">2명</span></div>
+    <div class="member-row">
+      <div class="m-avatar">신</div>
+      <div style="flex:1;"><div class="m-name">신유림</div><div class="m-email">yulim4013@gmail.com</div></div>
+      <div class="m-role owner">소유자</div>
+    </div>
+    <div class="member-row">
+      <div class="m-avatar" style="background:#7B61FF;">김</div>
+      <div style="flex:1;"><div class="m-name">김민지</div><div class="m-email">minji@company.com</div></div>
+      <div class="m-role">팀원</div>
+    </div>
+    <!-- 참여 요청 대기 중 -->
+    <div class="pending-row">
+      <div class="m-avatar" style="background:#CCC; font-size:11px;">?</div>
+      <div style="flex:1;">
+        <div class="m-name" style="font-size:13px;">park@agency.com</div>
+        <div class="m-email">링크로 참여 요청 · 2025-05-17</div>
+      </div>
+      <span class="pending-badge">대기중</span>
+      <button class="btn btn-primary btn-sm" style="margin-left:8px;">수락</button>
+      <button class="btn btn-secondary btn-sm">거절</button>
+    </div>
+
+    <div class="invite-area">
+      <div style="font-size:12px; font-weight:700; margin-bottom:10px; color:#555;">팀원 초대</div>
+      <div class="invite-row">
+        <input class="invite-input" type="email" placeholder="이메일 주소 입력">
+        <button class="btn btn-primary btn-sm">초대 발송</button>
+      </div>
+      <div class="or-line">— 또는 링크로 공유 —</div>
+      <button class="link-copy-btn" onclick="alert('링크 복사됨! 링크를 받은 사람이 접속하면 소유자에게 수락 요청이 전송됩니다.')">
+        <span class="url">https://chakchak.kr/invite/kcr2025-abc123</span>
+        <span style="color:#E25B45; font-weight:700; white-space:nowrap; font-size:12px;">링크 복사</span>
+      </button>
+      <div style="font-size:11px; color:#AAA; margin-top:6px;">링크로 접속해도 소유자가 수락해야 참여할 수 있어요.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ======================================================
+     S_CARDS: 카드 등록
+====================================================== -->
+<div id="s_cards" class="screen">
+<div class="page-wrap">
+  <div class="back-nav" onclick="show('s1')"><i data-lucide="arrow-left" style="width:14px;height:14px;"></i> 돌아가기</div>
+  <div class="page-hd">
+    <div class="page-title">카드 등록</div>
+    <button class="btn btn-ghost btn-sm">+ 카드 추가</button>
+  </div>
+  <div class="card-box">
+    <div class="box-hd">등록된 카드 3개</div>
+    <div class="card-item-row">
+      <div class="card-icon" style="background:linear-gradient(135deg,#1A5FFF,#0040CC);">신한</div>
+      <div style="flex:1;"><div style="font-size:13px; font-weight:600;">신한 법인카드</div><div style="font-size:11px; color:#AAA;">****-****-****-0912</div></div>
+      <span class="badge badge-orange">법인</span>
+    </div>
+    <div class="card-item-row">
+      <div class="card-icon" style="background:linear-gradient(135deg,#FFB900,#E6A000);">KB</div>
+      <div style="flex:1;"><div style="font-size:13px; font-weight:600;">KB 법인카드</div><div style="font-size:11px; color:#AAA;">****-****-****-3847</div></div>
+      <span class="badge badge-orange">법인</span>
+    </div>
+    <div class="card-item-row">
+      <div class="card-icon" style="background:linear-gradient(135deg,#5A9083,#158C50);">삼성</div>
+      <div style="flex:1;"><div style="font-size:13px; font-weight:600;">삼성카드 (개인)</div><div style="font-size:11px; color:#AAA;">****-****-****-2211</div></div>
+      <span class="badge badge-gray">개인</span>
+    </div>
+  </div>
+  <div style="font-size:12px; color:#AAA; margin-top:8px; padding:0 4px;">영수증 업로드 시 등록된 카드를 빠르게 선택할 수 있어요.</div>
+</div>
+</div>
+
+<!-- ======================================================
+     MODAL: 업로드 완료
+====================================================== -->
+<div class="overlay" id="ov-complete" onclick="closeComplete(event)">
+  <div class="modal complete-modal" onclick="event.stopPropagation()">
+    <div class="modal-close" onclick="closeComplete()">✕</div>
+    <div style="text-align:center; margin-bottom:10px; color:#5A9083;"><i data-lucide="check-circle" style="width:52px;height:52px;stroke-width:1.5;"></i></div>
+    <div style="font-size:18px; font-weight:800; text-align:center; margin-bottom:4px;">저장 완료!</div>
+    <div style="font-size:13px; color:#888; text-align:center; margin-bottom:4px;" id="complete-sub">영수증이 저장됐어요.</div>
+    <div class="complete-meta" id="complete-meta"></div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary" onclick="goToProject()" style="flex:1;" id="complete-btn1">완료</button>
+      <button class="btn btn-secondary" onclick="closeComplete(); resetUpload();">계속 업로드</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 영수증 업로드 (프로젝트 내에서) -->
+<div class="overlay" id="ov-upload" onclick="closeUploadModal(event)">
+  <div class="modal" style="max-width:480px; max-height:88vh; overflow-y:auto;" onclick="event.stopPropagation()">
+    <div class="modal-close" onclick="closeUploadModal()">✕</div>
+    <div style="font-size:16px; font-weight:800; margin-bottom:16px;">영수증 업로드</div>
+
+    <div id="m-ub">
+      <div class="upload-area" onclick="doUploadModal()" style="padding:40px 20px;">
+        <div style="margin-bottom:12px; color:#FFC145;"><i data-lucide="camera" style="width:48px;height:48px;stroke-width:1.5;"></i></div>
+        <div style="font-size:15px; font-weight:700; margin-bottom:6px;">사진 찍기 또는 파일 선택</div>
+        <div style="font-size:13px; color:#AAA;">JPG, PNG, PDF · AI가 자동으로 정보를 추출해요</div>
+      </div>
+    </div>
+
+    <div id="m-ua" style="display:none;">
+      <div style="background:#E2F0EC; border-radius:8px; padding:10px 14px; font-size:13px; color:#5A9083; font-weight:600; margin-bottom:14px;">
+        ✓ 업로드 완료 — AI가 정보를 자동 추출했어요. 확인 후 저장하세요.
+      </div>
+      <div class="preview-card">
+        <div class="preview-img">🧾</div>
+        <div class="preview-fields">
+          <div class="checkbox-wrap" onclick="toggleForeignM(this)">
+            <input type="checkbox" id="m-fc" onclick="event.stopPropagation()">
+            <label for="m-fc">🌏 해외 영수증 (번역 + 환율 자동 적용)</label>
+          </div>
+          <div class="field-row2">
+            <div>
+              <div class="field-label">거래일자</div>
+              <input class="field-input ocr" type="text" value="2025-05-17">
+              <div class="ocr-label">AI 자동 추출</div>
+            </div>
+            <div>
+              <div class="field-label">금액</div>
+              <input class="field-input ocr" type="text" value="85,000">
+              <div class="ocr-label">AI 자동 추출</div>
+            </div>
+          </div>
+          <div>
+            <div class="field-label">구매처</div>
+            <input class="field-input ocr" type="text" value="삼성역 포차">
+            <div class="ocr-label">AI 자동 추출</div>
+          </div>
+          <div class="field-row2">
+            <div>
+              <div class="field-label">내용</div>
+              <input class="field-input" type="text" placeholder="예: 식대, 교통비...">
+            </div>
+            <div>
+              <div class="field-label">구분</div>
+              <select class="field-select">
+                <option>영수증</option><option>세금계산서</option><option>간이영수증</option><option>견적서</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div class="field-label">결제수단</div>
+            <div class="pay-opts">
+              <div class="pay-opt on" onclick="setPayM(this,'corp')">법인카드</div>
+              <div class="pay-opt" onclick="setPayM(this,'personal')">개인카드</div>
+              <div class="pay-opt" onclick="setPayM(this,'cash')">현금</div>
+            </div>
+            <div class="card-drop show" id="m-cardDrop">
+              <select class="field-select" style="margin-top:6px;">
+                <option>신한 법인카드 ****0912</option>
+                <option>KB 법인카드 ****3847</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row2">
+            <div>
+              <div class="field-label">결제자</div>
+              <input class="field-input" type="text" value="신유림">
+            </div>
+            <div>
+              <div class="field-label">이용자 <span style="font-size:10px; color:#CCC; font-weight:400;">(선택)</span></div>
+              <input class="field-input" type="text" placeholder="예: 신유림 외 4명">
+            </div>
+          </div>
+          <div style="background:#FEF2EC; border-radius:7px; padding:8px 12px; font-size:12px; color:#E25B45; font-weight:600;">
+            <i data-lucide="folder" style="width:12px;height:12px;"></i> KCR 2025에 저장됩니다
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary" onclick="doSaveModal()" style="flex:1;">저장</button>
+            <button class="btn btn-secondary" onclick="resetUploadModal()">다시 찍기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 내역 추가 선택 -->
+<div class="overlay" id="ov-add-choice" onclick="closeAddChoice(event)">
+  <div class="modal" style="max-width:340px;" onclick="event.stopPropagation()">
+    <div class="modal-close" onclick="closeAddChoice()">✕</div>
+    <div style="font-size:16px; font-weight:800; margin-bottom:4px;">내역 추가</div>
+    <div style="font-size:13px; color:#888; margin-bottom:20px;">어떻게 추가할까요?</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn" style="padding:16px; background:#FEF2EC; border:1.5px solid #F5C4A8; border-radius:10px; display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer;" onclick="closeAddChoice(); openUploadModal()"
+        <div style="flex-shrink:0; color:#FFC145;"><i data-lucide="camera" style="width:32px;height:32px;stroke-width:1.5;"></i></div>
+        <div>
+          <div style="font-size:14px; font-weight:700; color:#E25B45;">영수증 업로드</div>
+          <div style="font-size:12px; color:#AAA; margin-top:2px; font-weight:400;">사진 찍으면 AI가 정보를 자동으로 채워줘요</div>
+        </div>
+      </button>
+      <button class="btn" style="padding:16px; background:#FAFAFA; border:1.5px solid #E8E8E8; border-radius:10px; display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer;" onclick="closeAddChoice(); addRow()">
+        <div style="flex-shrink:0; color:#888;"><i data-lucide="pen-line" style="width:32px;height:32px;stroke-width:1.5;"></i></div>
+        <div>
+          <div style="font-size:14px; font-weight:700; color:#2D2D2D;">내용만 입력</div>
+          <div style="font-size:12px; color:#AAA; margin-top:2px; font-weight:400;">영수증 없이 직접 입력 · 사진은 나중에 추가 가능</div>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 영수증 첨부 (미제출 항목 클릭 시) -->
+<div class="overlay" id="ov-attach" onclick="closeAttach(event)">
+  <div class="modal" style="max-width:340px;" onclick="event.stopPropagation()">
+    <div class="modal-close" onclick="closeAttach()">✕</div>
+    <div style="font-size:15px; font-weight:800; margin-bottom:2px;" id="attach-title">영수증 첨부</div>
+    <div style="font-size:12px; color:#AAA; margin-bottom:16px;" id="attach-sub"></div>
+    <div class="upload-area" style="padding:32px 20px;" onclick="closeAttach(); alert('카메라 또는 파일 선택 (실제 앱에서 작동합니다)')">
+      <div style="margin-bottom:8px; color:#FFC145;"><i data-lucide="camera" style="width:40px;height:40px;stroke-width:1.5;"></i></div>
+      <div style="font-size:14px; font-weight:700; margin-bottom:4px;">사진 찍기 또는 파일 선택</div>
+      <div style="font-size:12px; color:#AAA;">JPG, PNG, PDF</div>
+    </div>
+    <button class="btn btn-secondary" onclick="closeAttach()" style="width:100%; margin-top:10px;">취소</button>
+  </div>
+</div>
+
+<!-- MODAL: PDF 설정 -->
+<div class="overlay" id="ov-pdf" onclick="closePdfModal(event)">
+  <div class="modal pdf-modal" onclick="event.stopPropagation()">
+    <div class="modal-close" onclick="closePdfModal()">✕</div>
+    <div style="font-size:17px; font-weight:800; margin-bottom:4px;">PDF 다운로드</div>
+    <div style="font-size:13px; color:#888;">포함할 항목을 선택하세요</div>
+
+    <div class="col-toggle-list">
+      <div class="col-toggle" onclick="toggleCol(this)">
+        <div><div class="col-toggle-label">순번</div></div>
+        <div class="toggle-sw on"></div>
+      </div>
+      <div class="col-toggle" onclick="toggleCol(this)">
+        <div><div class="col-toggle-label">거래일자</div></div>
+        <div class="toggle-sw on"></div>
+      </div>
+      <div class="col-toggle" onclick="toggleCol(this)">
+        <div><div class="col-toggle-label">구분</div></div>
+        <div class="toggle-sw on"></div>
+      </div>
+      <div class="col-toggle" onclick="toggleCol(this)">
+        <div><div class="col-toggle-label">구매처</div></div>
+        <div class="toggle-sw on"></div>
+      </div>
+      <div class="col-toggle" onclick="toggleCol(this)">
+        <div><div class="col-toggle-label">내용</div></div>
+        <div class="toggle-sw on"></div>
+      </div>
+      <div class="col-toggle" onclick="toggleCol(this)">
+        <div><div class="col-toggle-label">금액</div></div>
+        <div class="toggle-sw on"></div>
+      </div>
+      <div class="col-toggle" onclick="toggleCol(this)">
+        <div><div class="col-toggle-label">결제수단</div></div>
+        <div class="toggle-sw on"></div>
+      </div>
+      <div class="col-toggle off" onclick="toggleCol(this)">
+        <div>
+          <div class="col-toggle-label">결제자</div>
+          <div class="col-toggle-sub">내부 확인용 — 클라이언트 제출 시 제외 권장</div>
+        </div>
+        <div class="toggle-sw"></div>
+      </div>
+      <div class="col-toggle off" onclick="toggleCol(this)">
+        <div>
+          <div class="col-toggle-label">이용자</div>
+          <div class="col-toggle-sub">내부 확인용 — 클라이언트 제출 시 제외 권장</div>
+        </div>
+        <div class="toggle-sw"></div>
+      </div>
+      <div class="col-toggle" onclick="toggleCol(this)">
+        <div><div class="col-toggle-label">영수증 이미지 첨부</div></div>
+        <div class="toggle-sw on"></div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary" onclick="alert('PDF 생성 중...\\n(실제 앱에서는 pdf-lib로 생성됩니다)'); closePdfModal();" style="flex:1;">PDF 생성</button>
+      <button class="btn btn-secondary" onclick="closePdfModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 영수증 이미지 -->
+<div class="overlay" id="ov-receipt" onclick="closeReceipt(event)">
+  <div class="modal receipt-modal" onclick="event.stopPropagation()">
+    <div class="modal-close" onclick="closeReceipt()">✕</div>
+    <div style="font-size:15px; font-weight:700;" id="rm-title"></div>
+    <div class="receipt-modal-img" id="rm-img"></div>
+    <div class="receipt-modal-meta" id="rm-meta"></div>
+  </div>
+</div>
+
+<script>
+let lastScreen = 's2';
+function show(id) {
+  const cur = document.querySelector('.screen.active');
+  if (cur && cur.id !== id) lastScreen = cur.id;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('nt1').classList.toggle('active', id === 's1');
+  document.getElementById('nt2').classList.toggle('active', ['s2','s3','s3_team'].includes(id));
+  window.scrollTo(0, 0);
+}
+
+function doUpload() {
+  document.getElementById('ub').style.display = 'none';
+  document.getElementById('ua').style.display = 'block';
+}
+function resetUpload() {
+  document.getElementById('ub').style.display = 'block';
+  document.getElementById('ua').style.display = 'none';
+}
+
+function doSave() {
+  const sel = document.getElementById('projSelect');
+  const projName = sel.options[sel.selectedIndex].text;
+  const hasProjSelected = sel.value !== '';
+  const statusText = hasProjSelected
+    ? projName + '에 저장됨'
+    : '보관함에 저장됨 · 나중에 프로젝트에서 연결하세요';
+  const statusColor = hasProjSelected ? '#5A9083' : '#888';
+
+  document.getElementById('complete-meta').innerHTML = `
+    <div class="cmeta-row"><span class="cmeta-lbl">프로젝트</span><span class="cmeta-val">${hasProjSelected ? projName : '미배정'}</span></div>
+    <div class="cmeta-row"><span class="cmeta-lbl">구매처</span><span class="cmeta-val">삼성역 포차</span></div>
+    <div class="cmeta-row"><span class="cmeta-lbl">금액</span><span class="cmeta-val">85,000원</span></div>
+    <div class="cmeta-row"><span class="cmeta-lbl">결제</span><span class="cmeta-val">신한 법인카드 ****0912</span></div>
+    <div class="cmeta-row"><span class="cmeta-lbl">상태</span><span class="cmeta-val" style="color:${statusColor};">${statusText}</span></div>
+  `;
+  document.getElementById('complete-btn1').style.display = 'flex';
+  document.getElementById('ov-complete').classList.add('show');
+}
+function goToProject() {
+  document.getElementById('ov-complete').classList.remove('show');
+  resetUpload();
+  show('s3');
+}
+function closeComplete(e) {
+  if (!e || e.target === document.getElementById('ov-complete')) {
+    document.getElementById('ov-complete').classList.remove('show');
+  }
+}
+
+function toggleForeign(wrap) {
+  const cb = document.getElementById('fc');
+  cb.checked = !cb.checked;
+}
+function setPay(el, type) {
+  document.querySelectorAll('.pay-opt').forEach(o => o.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('cardDrop').classList.toggle('show', type === 'corp');
+}
+
+function openReceipt(title, vendor, amount, emoji, pay) {
+  document.getElementById('rm-title').textContent = title;
+  document.getElementById('rm-img').textContent = emoji;
+  document.getElementById('rm-meta').innerHTML = `
+    <div><div class="rm-lbl">구매처</div><div class="rm-val">${vendor}</div></div>
+    <div><div class="rm-lbl">금액</div><div class="rm-val">${amount}원</div></div>
+    <div><div class="rm-lbl">결제수단</div><div class="rm-val">${pay||'—'}</div></div>
+    <div><div class="rm-lbl">상태</div><div class="rm-val" style="color:#5A9083;">✓ 업로드 완료</div></div>
+  `;
+  document.getElementById('ov-receipt').classList.add('show');
+}
+function closeReceipt(e) {
+  if (!e || e.target === document.getElementById('ov-receipt')) {
+    document.getElementById('ov-receipt').classList.remove('show');
+  }
+}
+// 업로드 모달 (프로젝트 내)
+function openUploadModal() {
+  document.getElementById('m-ub').style.display = 'block';
+  document.getElementById('m-ua').style.display = 'none';
+  document.getElementById('ov-upload').classList.add('show');
+  lucide.createIcons();
+}
+function closeUploadModal(e) {
+  if (!e || e.target === document.getElementById('ov-upload')) {
+    document.getElementById('ov-upload').classList.remove('show');
+  }
+}
+function doUploadModal() {
+  document.getElementById('m-ub').style.display = 'none';
+  document.getElementById('m-ua').style.display = 'block';
+  lucide.createIcons();
+}
+function resetUploadModal() {
+  document.getElementById('m-ub').style.display = 'block';
+  document.getElementById('m-ua').style.display = 'none';
+}
+function doSaveModal() {
+  closeUploadModal();
+  // 완료 팝업 재활용 — 프로젝트 선택 상태로
+  document.getElementById('complete-meta').innerHTML = `
+    <div class="cmeta-row"><span class="cmeta-lbl">프로젝트</span><span class="cmeta-val">KCR 2025</span></div>
+    <div class="cmeta-row"><span class="cmeta-lbl">구매처</span><span class="cmeta-val">삼성역 포차</span></div>
+    <div class="cmeta-row"><span class="cmeta-lbl">금액</span><span class="cmeta-val">85,000원</span></div>
+    <div class="cmeta-row"><span class="cmeta-lbl">결제</span><span class="cmeta-val">신한 법인카드 ****0912</span></div>
+    <div class="cmeta-row"><span class="cmeta-lbl">상태</span><span class="cmeta-val" style="color:#5A9083;">KCR 2025에 저장됨</span></div>
+  `;
+  document.getElementById('complete-btn1').style.display = 'flex';
+  document.getElementById('complete-sub').textContent = '영수증이 저장됐어요.';
+  document.getElementById('ov-complete').classList.add('show');
+  lucide.createIcons();
+}
+function setPayM(el, type) {
+  el.closest('.pay-opts').querySelectorAll('.pay-opt').forEach(o => o.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('m-cardDrop').classList.toggle('show', type === 'corp');
+}
+function toggleForeignM(wrap) {
+  const cb = document.getElementById('m-fc');
+  cb.checked = !cb.checked;
+}
+
+function openAddChoice() {
+  document.getElementById('ov-add-choice').classList.add('show');
+}
+function closeAddChoice(e) {
+  if (!e || e.target === document.getElementById('ov-add-choice')) {
+    document.getElementById('ov-add-choice').classList.remove('show');
+  }
+}
+
+let rowCounter = 6;
+function addRow() {
+  rowCounter++;
+  const n = rowCounter;
+  const tbody = document.querySelector('#s3 .data-tbl tbody');
+  const totalRow = tbody.querySelector('.total-tr');
+  const tr = document.createElement('tr');
+  tr.id = 'new-row-' + n;
+  tr.style.background = '#FFFBF5';
+  tr.innerHTML = `
+    <td style="color:#E25B45; font-weight:700;">${n}</td>
+    <td><input style="width:80px; padding:3px 6px; border:1.5px solid #E25B45; border-radius:4px; font-size:12px; font-family:inherit;" type="date" value="2025-05-17"></td>
+    <td><select style="padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit; background:#fff;">
+      <option>영수증</option><option>세금계산서</option><option>간이영수증</option><option>견적서</option>
+    </select></td>
+    <td><input style="width:90px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="구매처"></td>
+    <td><input style="width:100px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="내용"></td>
+    <td><input style="width:80px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit; text-align:right;" type="text" placeholder="0"></td>
+    <td><input style="width:90px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="결제수단"></td>
+    <td><input style="width:70px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="결제자"></td>
+    <td><input style="width:80px; padding:3px 6px; border:1.5px solid #E8E8E8; border-radius:4px; font-size:12px; font-family:inherit;" type="text" placeholder="이용자"></td>
+    <td style="text-align:center">
+      <span class="r-missing" onclick="openAttach(${n},'새 항목')">미제출</span>
+    </td>
+  `;
+  tbody.insertBefore(tr, totalRow);
+  tr.querySelector('input[type="text"]') && tr.querySelectorAll('input')[1].focus();
+}
+
+function openAttach(num, label) {
+  document.getElementById('attach-title').textContent = '영수증 첨부';
+  document.getElementById('attach-sub').textContent = '#' + num + ' ' + label;
+  document.getElementById('ov-attach').classList.add('show');
+}
+function closeAttach(e) {
+  if (!e || e.target === document.getElementById('ov-attach')) {
+    document.getElementById('ov-attach').classList.remove('show');
+  }
+}
+
+function openPdfModal() {
+  document.getElementById('ov-pdf').classList.add('show');
+}
+function closePdfModal(e) {
+  if (!e || e.target === document.getElementById('ov-pdf')) {
+    document.getElementById('ov-pdf').classList.remove('show');
+  }
+}
+function toggleCol(row) {
+  const sw = row.querySelector('.toggle-sw');
+  const isOn = sw.classList.toggle('on');
+  row.classList.toggle('off', !isOn);
+}
+
+lucide.createIcons();
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeComplete(); closeReceipt(); closePdfModal(); closeAttach(); closeAddChoice(); closeUploadModal(); }
+});
+</script>
+</body>
+</html>
