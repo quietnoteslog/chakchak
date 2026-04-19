@@ -206,6 +206,8 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-s
 .lucide { display: inline-block; vertical-align: middle; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 </style>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -228,8 +230,9 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-s
     <div class="page-title">영수증 업로드</div>
   </div>
 
+  <input type="file" id="file-input-main" accept="image/*,application/pdf" style="display:none;" onchange="handleFileMain(this)">
   <div id="ub">
-    <div class="upload-area" onclick="doUpload()">
+    <div class="upload-area" onclick="document.getElementById('file-input-main').click()">
       <div style="margin-bottom:12px; color:#FFC145;"><i data-lucide="camera" style="width:52px;height:52px;stroke-width:1.5;"></i></div>
       <div style="font-size:16px; font-weight:700; margin-bottom:6px;">영수증 사진 찍기 또는 파일 선택</div>
       <div style="font-size:13px; color:#AAA;">JPG, PNG, PDF · AI가 자동으로 정보를 추출해요</div>
@@ -412,7 +415,8 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-s
     <div class="detail-btns">
       <button class="btn btn-secondary btn-sm" onclick="show('s3_team')">👥 팀원</button>
       <button class="btn btn-secondary btn-sm">공유 링크</button>
-      <button class="btn btn-secondary btn-sm">PDF 미리보기</button>
+      <button class="btn btn-secondary btn-sm" onclick="downloadExcel()"><i data-lucide="file-spreadsheet" style="width:13px;height:13px;"></i> 엑셀</button>
+      <button class="btn btn-secondary btn-sm" onclick="downloadAllImages()"><i data-lucide="archive" style="width:13px;height:13px;"></i> 영수증 일괄</button>
       <button class="btn btn-primary btn-sm" onclick="openPdfModal()">PDF 다운로드</button>
     </div>
   </div>
@@ -478,9 +482,6 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-s
                 <td>6</td><td>05-17</td><td>영수증</td><td>Tokyo Taxi</td><td>택시 (도쿄→빅사이트)</td>
                 <td class="amt">60,300</td><td style="color:#7B61FF; font-size:11px;">KB법인 ****3847</td><td>신유림</td><td style="font-size:11px; color:#CCC;">—</td>
                 <td style="text-align:center"><span class="r-check ok" onclick="openReceipt('택시(도쿄)','Tokyo Taxi','60,300원 (¥5,300)','🌏','KB 법인카드 ****3847')">✓</span></td>
-              </tr>
-              <tr>
-                <td colspan="9" style="text-align:center; color:#DDD; font-size:12px; padding:8px;">... 25행 더 ...</td>
               </tr>
               <tr class="total-tr">
                 <td colspan="5" style="color:#888; font-size:11px;">현장 운영비 합계</td>
@@ -703,8 +704,9 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-s
     <div class="modal-close" onclick="closeUploadModal()">✕</div>
     <div style="font-size:16px; font-weight:800; margin-bottom:16px;">영수증 업로드</div>
 
+    <input type="file" id="file-input-modal" accept="image/*,application/pdf" style="display:none;" onchange="handleFileModal(this)">
     <div id="m-ub">
-      <div class="upload-area" onclick="doUploadModal()" style="padding:40px 20px;">
+      <div class="upload-area" onclick="document.getElementById('file-input-modal').click()" style="padding:40px 20px;">
         <div style="margin-bottom:12px; color:#FFC145;"><i data-lucide="camera" style="width:48px;height:48px;stroke-width:1.5;"></i></div>
         <div style="font-size:15px; font-weight:700; margin-bottom:6px;">사진 찍기 또는 파일 선택</div>
         <div style="font-size:13px; color:#AAA;">JPG, PNG, PDF · AI가 자동으로 정보를 추출해요</div>
@@ -898,6 +900,11 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-s
     <div style="font-size:15px; font-weight:700;" id="rm-title"></div>
     <div class="receipt-modal-img" id="rm-img"></div>
     <div class="receipt-modal-meta" id="rm-meta"></div>
+    <div id="rm-download" style="margin-top:14px; display:none;">
+      <a id="rm-download-link" class="btn btn-secondary" style="width:100%; justify-content:center; text-decoration:none;">
+        <i data-lucide="download" style="width:14px;height:14px;"></i> 영수증 다운로드
+      </a>
+    </div>
   </div>
 </div>
 
@@ -911,6 +918,87 @@ function show(id) {
   document.getElementById('nt1').classList.toggle('active', id === 's1');
   document.getElementById('nt2').classList.toggle('active', ['s2','s3','s3_team'].includes(id));
   window.scrollTo(0, 0);
+}
+
+// 파일 저장소: { receiptId -> { file, objectURL, name } }
+const fileStore = {};
+const currentProject = 'KCR 2025';
+let currentReceiptFile = null; // 현재 업로드 중인 파일 (저장 전)
+
+function handleFileMain(input) {
+  const file = input.files[0];
+  if (!file) return;
+  currentReceiptFile = file;
+  const url = URL.createObjectURL(file);
+  // 미리보기 이미지 업데이트
+  const previewImg = document.querySelector('#ua .preview-img');
+  if (previewImg) {
+    if (file.type.startsWith('image/')) {
+      previewImg.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
+    } else {
+      previewImg.textContent = '📄';
+    }
+  }
+  doUpload();
+}
+
+function handleFileModal(input) {
+  const file = input.files[0];
+  if (!file) return;
+  currentReceiptFile = file;
+  const url = URL.createObjectURL(file);
+  const previewImg = document.querySelector('#m-ua .preview-img');
+  if (previewImg) {
+    if (file.type.startsWith('image/')) {
+      previewImg.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
+    } else {
+      previewImg.textContent = '📄';
+    }
+  }
+  doUploadModal();
+}
+
+function storeReceipt(receiptId, label) {
+  if (!currentReceiptFile) return;
+  const ext = currentReceiptFile.name.split('.').pop();
+  const fileName = `[${currentProject}] ${receiptId}_${label}.${ext}`;
+  fileStore[receiptId] = {
+    file: currentReceiptFile,
+    objectURL: URL.createObjectURL(currentReceiptFile),
+    name: fileName
+  };
+  currentReceiptFile = null;
+}
+
+function downloadAllImages() {
+  const keys = Object.keys(fileStore);
+  if (keys.length === 0) { alert('저장된 영수증 이미지가 없습니다.'); return; }
+  const zip = new JSZip();
+  keys.forEach(id => {
+    zip.file(fileStore[id].name, fileStore[id].file);
+  });
+  zip.generateAsync({ type: 'blob' }).then(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `[${currentProject}] 영수증 일괄.zip`;
+    a.click();
+  });
+}
+
+function downloadExcel() {
+  const rows = document.querySelectorAll('#s3 .data-tbl tbody tr:not(.total-tr)');
+  const data = [['#','거래일자','구분','구매처','내용','금액','결제수단','결제자','이용자']];
+  rows.forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length < 9) return;
+    const row = [];
+    for (let i = 0; i < 9; i++) row.push(cells[i].textContent.trim());
+    data.push(row);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '현장 운영비');
+  XLSX.writeFile(wb, `[${currentProject}] 내역.xlsx`);
 }
 
 function doUpload() {
@@ -930,7 +1018,9 @@ function doSave() {
     ? projName + '에 저장됨'
     : '보관함에 저장됨 · 나중에 프로젝트에서 연결하세요';
   const statusColor = hasProjSelected ? '#5A9083' : '#888';
-
+  // 파일 저장
+  const nextId = Object.keys(fileStore).length + 1;
+  storeReceipt(nextId, '영수증');
   document.getElementById('complete-meta').innerHTML = `
     <div class="cmeta-row"><span class="cmeta-lbl">프로젝트</span><span class="cmeta-val">${hasProjSelected ? projName : '미배정'}</span></div>
     <div class="cmeta-row"><span class="cmeta-lbl">구매처</span><span class="cmeta-val">삼성역 포차</span></div>
@@ -962,16 +1052,32 @@ function setPay(el, type) {
   document.getElementById('cardDrop').classList.toggle('show', type === 'corp');
 }
 
-function openReceipt(title, vendor, amount, emoji, pay) {
+function openReceipt(title, vendor, amount, emoji, pay, receiptId) {
   document.getElementById('rm-title').textContent = title;
-  document.getElementById('rm-img').textContent = emoji;
+  const imgEl = document.getElementById('rm-img');
+  const stored = receiptId != null ? fileStore[receiptId] : null;
+  if (stored && stored.objectURL) {
+    imgEl.innerHTML = `<img src="${stored.objectURL}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">`;
+  } else {
+    imgEl.textContent = emoji;
+  }
   document.getElementById('rm-meta').innerHTML = `
     <div><div class="rm-lbl">구매처</div><div class="rm-val">${vendor}</div></div>
     <div><div class="rm-lbl">금액</div><div class="rm-val">${amount}원</div></div>
     <div><div class="rm-lbl">결제수단</div><div class="rm-val">${pay||'—'}</div></div>
     <div><div class="rm-lbl">상태</div><div class="rm-val" style="color:#5A9083;">✓ 업로드 완료</div></div>
   `;
+  const dlWrap = document.getElementById('rm-download');
+  const dlLink = document.getElementById('rm-download-link');
+  if (stored) {
+    dlLink.href = stored.objectURL;
+    dlLink.download = stored.name;
+    dlWrap.style.display = 'block';
+  } else {
+    dlWrap.style.display = 'none';
+  }
   document.getElementById('ov-receipt').classList.add('show');
+  lucide.createIcons();
 }
 function closeReceipt(e) {
   if (!e || e.target === document.getElementById('ov-receipt')) {
@@ -1001,6 +1107,8 @@ function resetUploadModal() {
 }
 function doSaveModal() {
   closeUploadModal();
+  const nextId = Object.keys(fileStore).length + 1;
+  storeReceipt(nextId, '영수증');
   // 완료 팝업 재활용 — 프로젝트 선택 상태로
   document.getElementById('complete-meta').innerHTML = `
     <div class="cmeta-row"><span class="cmeta-lbl">프로젝트</span><span class="cmeta-val">KCR 2025</span></div>
