@@ -293,38 +293,11 @@ export async function exportRecordsToPdf(
     <div class="total">합계 ${total.toLocaleString('ko-KR')}원</div>
   </div>`;
 
-  let bodyHtml = '';
-  let pageSize: string;
+  const pageSize = 'A4 portrait';
 
-  if (includeReceipts) {
-    pageSize = 'A4 portrait';
-    // 영수증 이미지 수집
-    const imageMap: Record<number, string | null> = {};
-    for (let i = 0; i < records.length; i++) {
-      const r = records[i];
-      if (!r.receiptPath && !r.receiptUrl) { imageMap[i] = null; continue; }
-      try {
-        const blob = await fetchReceiptBlob(r.receiptPath, r.receiptUrl);
-        if (blob.type === 'application/pdf') { imageMap[i] = null; continue; }
-        imageMap[i] = await blobToDataUrl(blob);
-      } catch (e) {
-        console.warn('receipt fetch failed', r.id, e);
-        imageMap[i] = null;
-      }
-    }
-
-    // 2개씩 묶어 한 페이지(landscape 2열)
-    const pages: string[] = [];
-    for (let i = 0; i < records.length; i += 2) {
-      const first = renderRecordCard(records[i], i, imageMap[i], columns, activeCols);
-      const second = records[i + 1]
-        ? renderRecordCard(records[i + 1], i + 1, imageMap[i + 1], columns, activeCols)
-        : '<article class="rp-card rp-empty"></article>';
-      pages.push(`<div class="rp-page">${first}${second}</div>`);
-    }
-    bodyHtml = pages.join('');
-  } else {
-    pageSize = 'A4 portrait';
+  // 요약 테이블 (커버 페이지에 항상 포함)
+  let summaryTable = '';
+  if (activeCols.length > 0) {
     const amountColIndex = activeCols.findIndex((c) => c.key === 'amount');
     const headRow = `<tr>${activeCols.map((c) => `<th style="width:${c.width}${c.align === 'right' ? ';text-align:right' : c.align === 'center' ? ';text-align:center' : ''}">${c.label}</th>`).join('')}</tr>`;
     const bodyRows = records.map((r, i) => {
@@ -343,12 +316,42 @@ export async function exportRecordsToPdf(
       const afterCell = after > 0 ? `<td colspan="${after}"></td>` : '';
       footRow = `<tr>${labelCell}${amountCell}${afterCell}</tr>`;
     }
-    bodyHtml = activeCols.length > 0 ? `<table>
+    summaryTable = `<table>
       <thead>${headRow}</thead>
       <tbody>${bodyRows}</tbody>
       ${footRow ? `<tfoot>${footRow}</tfoot>` : ''}
-    </table>` : '';
+    </table>`;
   }
+
+  // 영수증 페이지 (포함 시)
+  let receiptPagesHtml = '';
+  if (includeReceipts) {
+    const imageMap: Record<number, string | null> = {};
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i];
+      if (!r.receiptPath && !r.receiptUrl) { imageMap[i] = null; continue; }
+      try {
+        const blob = await fetchReceiptBlob(r.receiptPath, r.receiptUrl);
+        if (blob.type === 'application/pdf') { imageMap[i] = null; continue; }
+        imageMap[i] = await blobToDataUrl(blob);
+      } catch (e) {
+        console.warn('receipt fetch failed', r.id, e);
+        imageMap[i] = null;
+      }
+    }
+
+    const pages: string[] = [];
+    for (let i = 0; i < records.length; i += 2) {
+      const first = renderRecordCard(records[i], i, imageMap[i], columns, activeCols);
+      const second = records[i + 1]
+        ? renderRecordCard(records[i + 1], i + 1, imageMap[i + 1], columns, activeCols)
+        : '<article class="rp-card rp-empty"></article>';
+      pages.push(`<div class="rp-page">${first}${second}</div>`);
+    }
+    receiptPagesHtml = pages.join('');
+  }
+
+  const bodyHtml = summaryTable + receiptPagesHtml;
 
   const html = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8">
