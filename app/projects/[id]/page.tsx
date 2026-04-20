@@ -11,6 +11,8 @@ import {
   deleteRecord,
   addCategory,
   removeCategory,
+  addCategory2,
+  removeCategory2,
   addPaymentCard,
   removePaymentCard,
 } from '@/lib/firestore';
@@ -33,7 +35,7 @@ export default function ProjectDetailPage() {
   const [selectedTab, setSelectedTab] = useState<string>(ALL_TAB);
   const [showSettings, setShowSettings] = useState(false);
   const [newCategory, setNewCategory] = useState('');
-  const [newCategoryParent, setNewCategoryParent] = useState('');
+  const [newCategory2, setNewCategory2] = useState('');
   const [cardBank, setCardBank] = useState('');
   const [cardNumber, setCardNumber] = useState('');
 
@@ -114,24 +116,41 @@ export default function ProjectDetailPage() {
   const onAddCategory = async (e: FormEvent) => {
     e.preventDefault();
     if (!project || !isOwner) return;
-    const child = newCategory.trim();
-    if (!child) return;
-    if (child.includes('>')) { alert('카테고리 이름에 ">" 문자는 사용할 수 없습니다'); return; }
-    const full = newCategoryParent ? `${newCategoryParent} > ${child}` : child;
-    if ((project.categories ?? []).includes(full)) { alert('이미 있는 카테고리'); return; }
-    await addCategory(project.id, full);
+    const name = newCategory.trim();
+    if (!name) return;
+    if ((project.categories ?? []).includes(name)) { alert('이미 있는 카테고리'); return; }
+    await addCategory(project.id, name);
     setNewCategory('');
-    setNewCategoryParent('');
     await loadProject();
   };
 
   const onRemoveCategory = async (name: string) => {
     if (!project || !isOwner) return;
     const inUse = records.some((r) => r.categoryId === name);
-    if (inUse && !confirm(`"${name}" 카테고리에 내역이 있습니다. 삭제해도 기존 내역은 남지만 필터 탭에서 사라집니다. 계속할까요?`)) return;
-    if (!confirm(`"${name}" 카테고리를 삭제할까요?`)) return;
+    if (inUse && !confirm(`"${name}" 카테고리1에 내역이 있습니다. 삭제해도 기존 내역은 남지만 필터 탭에서 사라집니다. 계속할까요?`)) return;
+    if (!confirm(`"${name}" 카테고리1을 삭제할까요?`)) return;
     await removeCategory(project.id, name);
     if (selectedTab === name) setSelectedTab(ALL_TAB);
+    await loadProject();
+  };
+
+  const onAddCategory2 = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!project || !isOwner) return;
+    const name = newCategory2.trim();
+    if (!name) return;
+    if ((project.categories2 ?? []).includes(name)) { alert('이미 있는 카테고리'); return; }
+    await addCategory2(project.id, name);
+    setNewCategory2('');
+    await loadProject();
+  };
+
+  const onRemoveCategory2 = async (name: string) => {
+    if (!project || !isOwner) return;
+    const inUse = records.some((r) => r.categoryId2 === name);
+    if (inUse && !confirm(`"${name}" 카테고리2에 내역이 있습니다. 삭제해도 기존 내역은 남지만 추후 선택 불가입니다. 계속할까요?`)) return;
+    if (!confirm(`"${name}" 카테고리2를 삭제할까요?`)) return;
+    await removeCategory2(project.id, name);
     await loadProject();
   };
 
@@ -198,35 +217,36 @@ export default function ProjectDetailPage() {
             {showSettings && isOwner && (
               <section style={settingsBox}>
                 <div>
-                  <h3 style={settingsTitle}>카테고리</h3>
-                  <form onSubmit={onAddCategory} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 6, marginBottom: 8 }}>
-                    <select value={newCategoryParent} onChange={(e) => setNewCategoryParent(e.target.value)} style={{ ...inlineInput }}>
-                      <option value="">(상위 없음 — 최상위)</option>
-                      {getTopLevelCategories(project.categories ?? []).map((top) => (
-                        <option key={top} value={top}>{top}</option>
-                      ))}
-                    </select>
-                    <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder={newCategoryParent ? '예: 식비' : '예: 현장 운영비'} style={{ ...inlineInput }} />
+                  <h3 style={settingsTitle}>카테고리1</h3>
+                  <form onSubmit={onAddCategory} style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="예: 사전 업무" style={{ flex: 1, ...inlineInput }} />
                     <button type="submit" style={btnPrimary}>+ 추가</button>
                   </form>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {buildCategoryTree(project.categories ?? []).map((node) => (
-                      <div key={node.full}>
-                        <span style={chip}>
-                          {node.display}
-                          <button onClick={() => onRemoveCategory(node.full)} style={chipClose}>×</button>
-                        </span>
-                        {node.children.map((child) => (
-                          <div key={child.full} style={{ marginLeft: 20, marginTop: 4 }}>
-                            <span style={{ ...chip, background: '#f5f7fb', color: '#666' }}>
-                              ↳ {child.name}
-                              <button onClick={() => onRemoveCategory(child.full)} style={{ ...chipClose, color: '#666' }}>×</button>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {(project.categories ?? []).map((c) => (
+                      <span key={c} style={chip}>
+                        {c}
+                        <button onClick={() => onRemoveCategory(c)} style={chipClose}>×</button>
+                      </span>
                     ))}
                     {(project.categories ?? []).length === 0 && <span style={{ fontSize: 12, color: '#888' }}>추가된 카테고리 없음</span>}
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 16 }}>
+                  <h3 style={settingsTitle}>카테고리2</h3>
+                  <form onSubmit={onAddCategory2} style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    <input value={newCategory2} onChange={(e) => setNewCategory2(e.target.value)} placeholder="예: 식비" style={{ flex: 1, ...inlineInput }} />
+                    <button type="submit" style={btnPrimary}>+ 추가</button>
+                  </form>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {(project.categories2 ?? []).map((c) => (
+                      <span key={c} style={chip}>
+                        {c}
+                        <button onClick={() => onRemoveCategory2(c)} style={chipClose}>×</button>
+                      </span>
+                    ))}
+                    {(project.categories2 ?? []).length === 0 && <span style={{ fontSize: 12, color: '#888' }}>추가된 카테고리 없음</span>}
                   </div>
                 </div>
 
@@ -254,12 +274,8 @@ export default function ProjectDetailPage() {
               <TabBtn active={selectedTab === ALL_TAB} onClick={() => setSelectedTab(ALL_TAB)}>전체 ({records.length})</TabBtn>
               {(project.categories ?? []).map((c) => {
                 const count = records.filter((r) => r.categoryId === c).length;
-                const display = c.includes(' > ') ? c.split(' > ').slice(-1)[0] : c;
-                const isChild = c.includes(' > ');
                 return (
-                  <TabBtn key={c} active={selectedTab === c} onClick={() => setSelectedTab(c)}>
-                    {isChild ? `↳ ${display}` : display} ({count})
-                  </TabBtn>
+                  <TabBtn key={c} active={selectedTab === c} onClick={() => setSelectedTab(c)}>{c} ({count})</TabBtn>
                 );
               })}
             </div>
@@ -299,7 +315,8 @@ export default function ProjectDetailPage() {
                         <th style={thStyle}>#</th>
                         <th style={thStyle}>일자</th>
                         <th style={thStyle}>구분</th>
-                        <th style={thStyle}>카테고리</th>
+                        <th style={thStyle}>카테고리1</th>
+                        <th style={thStyle}>카테고리2</th>
                         <th style={thStyle}>구매처</th>
                         <th style={thStyle}>내용</th>
                         <th style={{ ...thStyle, textAlign: 'right' }}>금액</th>
@@ -319,6 +336,7 @@ export default function ProjectDetailPage() {
                             <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDate(r.date)}</td>
                             <td style={tdStyle}><span style={tag}>{r.type}</span></td>
                             <td style={{ ...tdStyle, color: '#666' }}>{r.categoryId || '-'}</td>
+                            <td style={{ ...tdStyle, color: '#666' }}>{r.categoryId2 || '-'}</td>
                             <td style={{ ...tdStyle, fontWeight: 600 }}>{r.merchant}</td>
                             <td style={{ ...tdStyle, color: '#666', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.content}>{r.content || '-'}</td>
                             <td style={{ ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatMoney(r.amount)}</td>
@@ -391,45 +409,6 @@ function formatMoney(n: number): string {
   return n.toLocaleString('ko-KR');
 }
 
-// 카테고리 유틸 - "부모 > 자식" 플랫 문자열 기반
-function getTopLevelCategories(all: string[]): string[] {
-  return all.filter((c) => !c.includes(' > '));
-}
-
-interface CategoryNode {
-  full: string;
-  name: string;
-  display: string;
-  children: { full: string; name: string }[];
-}
-
-function buildCategoryTree(all: string[]): CategoryNode[] {
-  const tops = getTopLevelCategories(all);
-  const topSet = new Set(tops);
-  const orphans: string[] = [];
-  const childrenByParent: Record<string, { full: string; name: string }[]> = {};
-  for (const c of all) {
-    if (!c.includes(' > ')) continue;
-    const [parent, ...rest] = c.split(' > ');
-    const childName = rest.join(' > ');
-    if (topSet.has(parent)) {
-      (childrenByParent[parent] ??= []).push({ full: c, name: childName });
-    } else {
-      orphans.push(c);
-    }
-  }
-  const nodes: CategoryNode[] = tops.map((t) => ({
-    full: t,
-    name: t,
-    display: t,
-    children: childrenByParent[t] ?? [],
-  }));
-  for (const o of orphans) {
-    nodes.push({ full: o, name: o, display: o, children: [] });
-  }
-  return nodes;
-}
-
 const ownerBadge: React.CSSProperties = { fontSize: 11, padding: '3px 10px', background: '#e8efff', color: '#4a6bc4', borderRadius: 10, fontWeight: 600 };
 const btnPrimary: React.CSSProperties = { padding: '10px 16px', background: '#7b9fe8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none', cursor: 'pointer', display: 'inline-block' };
 const btnSecondary: React.CSSProperties = { padding: '8px 14px', background: '#fff', border: '1px solid #d0d6e2', borderRadius: 8, fontSize: 13, color: '#555', textDecoration: 'none' };
@@ -444,5 +423,5 @@ const emptyBox: React.CSSProperties = { padding: 24, background: '#fff', border:
 const thStyle: React.CSSProperties = { padding: '10px 10px', fontSize: 11, fontWeight: 700, textAlign: 'left', whiteSpace: 'nowrap' };
 const tdStyle: React.CSSProperties = { padding: '10px 10px', fontSize: 12, color: '#333' };
 const tag: React.CSSProperties = { fontSize: 10, padding: '2px 6px', background: '#f0f2f8', color: '#555', borderRadius: 4 };
-const linkBtn: React.CSSProperties = { fontSize: 11, background: 'none', border: 'none', color: '#7b9fe8', cursor: 'pointer', padding: 0, textDecoration: 'underline' };
+const linkBtn: React.CSSProperties = { fontSize: 11, background: 'none', border: 'none', color: '#7b9fe8', cursor: 'pointer', padding: 0, textDecoration: 'none' };
 const miniBtn: React.CSSProperties = { padding: '4px 8px', fontSize: 11, background: '#fff', border: '1px solid #d0d6e2', borderRadius: 4, color: '#555', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' };

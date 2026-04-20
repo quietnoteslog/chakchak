@@ -36,6 +36,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
 
   const [type, setType] = useState<RecordType>(existing?.type ?? '영수증');
   const [categoryId, setCategoryId] = useState<string>(existing?.categoryId ?? ((project.categories ?? [])[0] ?? ''));
+  const [categoryId2, setCategoryId2] = useState<string>(existing?.categoryId2 ?? ((project.categories2 ?? [])[0] ?? ''));
   const [date, setDate] = useState(
     existing ? existing.date.toDate().toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
   );
@@ -94,8 +95,8 @@ export default function RecordForm({ project, currentUid, currentName, existing,
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if ((project.categories ?? []).length === 0) { setError('카테고리를 먼저 추가하세요 (프로젝트 상세 상단)'); return; }
-    if (!categoryId) { setError('카테고리를 선택하세요'); return; }
+    if ((project.categories ?? []).length === 0) { setError('카테고리1을 먼저 추가하세요 (프로젝트 상세 > 설정)'); return; }
+    if (!categoryId) { setError('카테고리1을 선택하세요'); return; }
     const amt = Number(amount);
     if (!Number.isFinite(amt) || amt <= 0) { setError('금액을 올바르게 입력해주세요'); return; }
     if (!merchant.trim()) { setError('구매처를 입력해주세요'); return; }
@@ -134,6 +135,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         date: new Date(date),
         type,
         categoryId,
+        categoryId2,
         merchant: merchant.trim(),
         content: content.trim(),
         amount: amt,
@@ -212,24 +214,26 @@ export default function RecordForm({ project, currentUid, currentName, existing,
             {RECORD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </Field>
-        <Field label="카테고리 *">
+        <Field label="카테고리1 *">
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
             {(project.categories ?? []).length === 0 ? (
               <option value="">(카테고리 없음)</option>
             ) : (
               <>
                 <option value="">선택</option>
-                {(project.categories ?? []).map((c) => {
-                  const depth = c.split(' > ').length - 1;
-                  const last = c.split(' > ').slice(-1)[0];
-                  const label = depth > 0 ? `${'— '.repeat(depth)}${last}` : c;
-                  return <option key={c} value={c}>{label}</option>;
-                })}
+                {(project.categories ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
               </>
             )}
           </select>
         </Field>
       </div>
+
+      <Field label="카테고리2">
+        <select value={categoryId2} onChange={(e) => setCategoryId2(e.target.value)} style={inputStyle}>
+          <option value="">(선택 안 함)</option>
+          {(project.categories2 ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </Field>
 
       <Field label="일자 *">
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} />

@@ -72,6 +72,7 @@ export async function createProject(
     memberNames: { [ownerUid]: ownerDisplayName },
     invitedMembers: [],
     categories: [],
+    categories2: [],
     paymentCards: [],
     createdAt: serverTimestamp(),
   });
@@ -120,6 +121,18 @@ export async function addCategory(projectId: string, name: string) {
 export async function removeCategory(projectId: string, name: string) {
   await updateDoc(doc(db, PROJECTS, projectId), {
     categories: arrayRemove(name),
+  });
+}
+
+export async function addCategory2(projectId: string, name: string) {
+  await updateDoc(doc(db, PROJECTS, projectId), {
+    categories2: arrayUnion(name),
+  });
+}
+
+export async function removeCategory2(projectId: string, name: string) {
+  await updateDoc(doc(db, PROJECTS, projectId), {
+    categories2: arrayRemove(name),
   });
 }
 
@@ -234,6 +247,7 @@ export interface RecordInput {
   date: Date;
   type: RecordType;
   categoryId: string;
+  categoryId2: string;
   merchant: string;
   content: string;
   amount: number;
@@ -255,6 +269,7 @@ export async function addRecord(projectId: string, uid: string, input: RecordInp
     date: Timestamp.fromDate(input.date),
     type: input.type,
     categoryId: input.categoryId,
+    categoryId2: input.categoryId2,
     merchant: input.merchant,
     content: input.content,
     amount: input.amount,

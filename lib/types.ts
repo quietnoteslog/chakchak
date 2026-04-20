@@ -28,7 +28,8 @@ export interface Project {
   memberIds: string[];
   memberNames: Record<string, string>;
   invitedMembers: InvitedMember[];
-  categories: string[];
+  categories: string[];      // 카테고리1
+  categories2?: string[];    // 카테고리2 (선택)
   paymentCards: PaymentCard[];
   createdAt: Timestamp;
 }
@@ -58,7 +59,8 @@ export interface ExpenseRecord {
   projectId: string;
   date: Timestamp;
   type: RecordType;
-  categoryId: string;
+  categoryId: string;        // 카테고리1
+  categoryId2?: string;      // 카테고리2
   merchant: string;
   content: string;
   amount: number;
