@@ -1,11 +1,18 @@
 'use client';
 
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/AuthContext';
-import { getProject, inviteMember, cancelInvitation, removeMember, updateMemberName } from '@/lib/firestore';
-import { Project } from '@/lib/types';
+import {
+  getProject,
+  removeMember,
+  updateMemberName,
+  createInviteToken,
+  listInviteTokens,
+  revokeInviteToken,
+} from '@/lib/firestore';
+import { Project, InviteToken } from '@/lib/types';
 
 export default function MembersPage() {
   const { user, loading } = useAuth();
@@ -13,11 +20,11 @@ export default function MembersPage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const [project, setProject] = useState<Project | null>(null);
+  const [tokens, setTokens] = useState<InviteToken[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteName, setInviteName] = useState('');
-  const [inviting, setInviting] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [latestUrl, setLatestUrl] = useState<string | null>(null);
   const [editingUid, setEditingUid] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
@@ -30,8 +37,15 @@ export default function MembersPage() {
     setLoadingData(true);
     try {
       const p = await getProject(projectId);
-      if (!p) setError('프로젝트를 찾을 수 없습니다');
-      else setProject(p);
+      if (!p) {
+        setError('프로젝트를 찾을 수 없습니다');
+        return;
+      }
+      setProject(p);
+      if (p.ownerId === user?.uid) {
+        const ts = await listInviteTokens(projectId);
+        setTokens(ts);
+      }
     } catch {
       setError('불러오기 실패');
     } finally {
@@ -48,41 +62,36 @@ export default function MembersPage() {
 
   const isOwner = project?.ownerId === user.uid;
 
-  const onInvite = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!project || !isOwner) return;
-    const email = inviteEmail.trim().toLowerCase();
-    const name = inviteName.trim();
-    if (!email || !email.includes('@')) {
-      alert('올바른 이메일을 입력해주세요');
-      return;
-    }
-    if (!name) {
-      alert('표시 이름을 입력해주세요');
-      return;
-    }
-    if (email === user.email?.toLowerCase()) {
-      alert('본인은 이미 멤버입니다');
-      return;
-    }
-    setInviting(true);
+  const onCreateLink = async () => {
+    if (!project || !user) return;
+    setCreating(true);
     try {
-      await inviteMember(project.id, email, name);
-      setInviteEmail('');
-      setInviteName('');
+      const token = await createInviteToken(project.id, user.uid, 7);
+      const origin = window.location.origin;
+      const url = `${origin}/invite/${project.id}/${token}`;
+      setLatestUrl(url);
       await refresh();
     } catch {
-      alert('초대 실패');
+      alert('초대 링크 생성 실패');
     } finally {
-      setInviting(false);
+      setCreating(false);
     }
   };
 
-  const onCancelInvite = async (email: string) => {
+  const onRevoke = async (token: string) => {
     if (!project) return;
-    if (!confirm(`${email} 초대를 취소할까요?`)) return;
-    await cancelInvitation(project.id, email);
+    if (!confirm('이 초대 링크를 무효화할까요? 이후 해당 링크로는 참여 불가합니다.')) return;
+    await revokeInviteToken(project.id, token);
     await refresh();
+  };
+
+  const onCopy = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      alert('링크가 복사되었습니다');
+    } catch {
+      alert('복사 실패 — 직접 선택 후 복사해주세요');
+    }
   };
 
   const onRemoveMember = async (uid: string, name: string) => {
@@ -104,10 +113,7 @@ export default function MembersPage() {
   const saveEdit = async () => {
     if (!project || !editingUid) return;
     const name = editingName.trim();
-    if (!name) {
-      alert('이름을 비울 수 없습니다');
-      return;
-    }
+    if (!name) { alert('이름을 비울 수 없습니다'); return; }
     await updateMemberName(project.id, editingUid, name);
     setEditingUid(null);
     await refresh();
@@ -116,7 +122,7 @@ export default function MembersPage() {
   return (
     <div className="min-h-screen" style={{ background: '#f5f7fb' }}>
       <header style={{ padding: '16px 20px', background: '#fff', borderBottom: '1px solid #e5e9f2' }}>
-        <Link href={`/projects/${projectId}`} style={{ background: 'none', border: 'none', fontSize: 14, color: '#555', textDecoration: 'none' }}>
+        <Link href={`/projects/${projectId}`} style={{ fontSize: 14, color: '#555', textDecoration: 'none' }}>
           ← 프로젝트
         </Link>
       </header>
@@ -132,39 +138,71 @@ export default function MembersPage() {
 
             {isOwner && (
               <section style={{ marginBottom: 24, padding: 16, background: '#fff', borderRadius: 12, border: '1px solid #e5e9f2' }}>
-                <h2 style={{ fontSize: 14, fontWeight: 700, margin: 0, marginBottom: 12 }}>새 멤버 초대</h2>
-                <form onSubmit={onInvite} style={{ display: 'grid', gap: 8 }}>
-                  <input
-                    type="text"
-                    value={inviteName}
-                    onChange={(e) => setInviteName(e.target.value)}
-                    placeholder="표시 이름 (예: 김유림)"
-                    style={inputStyle}
-                  />
-                  <input
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="이메일"
-                    style={inputStyle}
-                  />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                  <h2 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>초대 링크</h2>
                   <button
-                    type="submit"
-                    disabled={inviting}
-                    style={{ padding: '10px 16px', background: inviting ? '#b5c4e8' : '#7b9fe8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: inviting ? 'default' : 'pointer' }}
+                    onClick={onCreateLink}
+                    disabled={creating}
+                    style={{ padding: '8px 14px', background: creating ? '#b5c4e8' : '#7b9fe8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: creating ? 'default' : 'pointer' }}
                   >
-                    {inviting ? '초대 중...' : '초대'}
+                    {creating ? '생성 중...' : '+ 링크 생성 (7일 유효)'}
                   </button>
-                </form>
-                <p style={{ fontSize: 12, color: '#888', margin: '8px 0 0 0' }}>
-                  초대받은 사람이 동일 이메일로 로그인하면 자동 참여됩니다. 내역의 &quot;작성자&quot;는 위에서 지정한 표시 이름으로 보입니다.
+                </div>
+                <p style={{ fontSize: 12, color: '#888', marginTop: 0, marginBottom: 8 }}>
+                  생성된 링크를 받은 사람은 Google 로그인 후 자동으로 참여됩니다. 다회용.
                 </p>
+
+                {latestUrl && (
+                  <div style={{ padding: 12, background: '#eef4ff', borderRadius: 8, marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, color: '#4a6bc4', marginBottom: 6, fontWeight: 600 }}>새 링크</div>
+                    <div style={{ fontSize: 12, color: '#333', wordBreak: 'break-all', marginBottom: 8 }}>{latestUrl}</div>
+                    <button
+                      onClick={() => onCopy(latestUrl)}
+                      style={{ padding: '6px 12px', background: '#7b9fe8', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      복사
+                    </button>
+                  </div>
+                )}
+
+                {tokens.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 6 }}>활성 링크 ({tokens.filter((t) => !t.revoked && t.expiresAt.toDate() > new Date()).length})</div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
+                      {tokens.map((t) => {
+                        const expired = t.expiresAt.toDate() < new Date();
+                        const dead = t.revoked || expired;
+                        const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${project.id}/${t.id}`;
+                        return (
+                          <li
+                            key={t.id}
+                            style={{ padding: 10, background: dead ? '#f5f5f5' : '#fff', border: '1px solid #e5e9f2', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, opacity: dead ? 0.5 : 1, flexWrap: 'wrap' }}
+                          >
+                            <div style={{ fontSize: 11, color: '#666', flex: 1, minWidth: 0, wordBreak: 'break-all' }}>
+                              {t.id.slice(0, 12)}...
+                              <span style={{ marginLeft: 8, color: dead ? '#c33' : '#3a8e5f' }}>
+                                {t.revoked ? '취소됨' : expired ? '만료' : `~${formatYmd(t.expiresAt.toDate())}`}
+                              </span>
+                              <span style={{ marginLeft: 8, color: '#888' }}>사용 {t.useCount}회</span>
+                            </div>
+                            {!dead && (
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                <button onClick={() => onCopy(url)} style={miniBtn()}>복사</button>
+                                <button onClick={() => onRevoke(t.id)} style={{ ...miniBtn(), color: '#c33', borderColor: '#f0c8c8' }}>취소</button>
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
               </section>
             )}
 
             <section>
               <h2 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>참여 중 ({project.memberIds.length})</h2>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8, marginBottom: 24 }}>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}>
                 {project.memberIds.map((uid) => {
                   const isThisOwner = uid === project.ownerId;
                   const displayName = project.memberNames?.[uid] ?? '(이름 없음)';
@@ -180,7 +218,7 @@ export default function MembersPage() {
                           <input
                             value={editingName}
                             onChange={(e) => setEditingName(e.target.value)}
-                            style={{ ...inputStyle, padding: '6px 10px' }}
+                            style={{ padding: '6px 10px', fontSize: 14, border: '1px solid #d0d6e2', borderRadius: 6, outline: 'none', width: '100%' }}
                             autoFocus
                           />
                         ) : (
@@ -188,31 +226,17 @@ export default function MembersPage() {
                         )}
                       </div>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        {isThisOwner && (
-                          <span style={{ fontSize: 10, padding: '2px 8px', background: '#e8efff', color: '#4a6bc4', borderRadius: 10, fontWeight: 600 }}>
-                            총괄
-                          </span>
-                        )}
+                        {isThisOwner && <span style={{ fontSize: 10, padding: '2px 8px', background: '#e8efff', color: '#4a6bc4', borderRadius: 10, fontWeight: 600 }}>총괄</span>}
                         {isEditing ? (
                           <>
-                            <button onClick={saveEdit} style={{ ...miniBtnStyle, color: '#4a6bc4', borderColor: '#c5d3ef' }}>
-                              저장
-                            </button>
-                            <button onClick={() => setEditingUid(null)} style={miniBtnStyle}>
-                              취소
-                            </button>
+                            <button onClick={saveEdit} style={{ ...miniBtn(), color: '#4a6bc4', borderColor: '#c5d3ef' }}>저장</button>
+                            <button onClick={() => setEditingUid(null)} style={miniBtn()}>취소</button>
                           </>
                         ) : (
                           <>
-                            {canEdit && (
-                              <button onClick={() => startEdit(uid, displayName)} style={miniBtnStyle}>
-                                이름 수정
-                              </button>
-                            )}
+                            {canEdit && <button onClick={() => startEdit(uid, displayName)} style={miniBtn()}>이름 수정</button>}
                             {isOwner && !isThisOwner && (
-                              <button onClick={() => onRemoveMember(uid, displayName)} style={{ ...miniBtnStyle, color: '#c33', borderColor: '#f0c8c8' }}>
-                                제거
-                              </button>
+                              <button onClick={() => onRemoveMember(uid, displayName)} style={{ ...miniBtn(), color: '#c33', borderColor: '#f0c8c8' }}>제거</button>
                             )}
                           </>
                         )}
@@ -221,30 +245,6 @@ export default function MembersPage() {
                   );
                 })}
               </ul>
-
-              {project.invitedMembers && project.invitedMembers.length > 0 && (
-                <>
-                  <h2 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>초대 대기 ({project.invitedMembers.length})</h2>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}>
-                    {project.invitedMembers.map((m) => (
-                      <li
-                        key={m.email}
-                        style={{ padding: 12, background: '#fff', borderRadius: 8, border: '1px dashed #d0d6e2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                      >
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600 }}>{m.displayName}</div>
-                          <div style={{ fontSize: 12, color: '#888' }}>{m.email}</div>
-                        </div>
-                        {isOwner && (
-                          <button onClick={() => onCancelInvite(m.email)} style={{ ...miniBtnStyle, color: '#c33', borderColor: '#f0c8c8' }}>
-                            취소
-                          </button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
             </section>
           </>
         ) : null}
@@ -253,21 +253,10 @@ export default function MembersPage() {
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  padding: '10px 12px',
-  fontSize: 14,
-  border: '1px solid #d0d6e2',
-  borderRadius: 8,
-  background: '#fff',
-  outline: 'none',
-};
+function miniBtn(): React.CSSProperties {
+  return { padding: '4px 10px', fontSize: 11, background: '#fff', border: '1px solid #d0d6e2', borderRadius: 6, color: '#555', cursor: 'pointer' };
+}
 
-const miniBtnStyle: React.CSSProperties = {
-  padding: '4px 10px',
-  fontSize: 11,
-  background: '#fff',
-  border: '1px solid #d0d6e2',
-  borderRadius: 6,
-  color: '#555',
-  cursor: 'pointer',
-};
+function formatYmd(d: Date): string {
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+}

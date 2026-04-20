@@ -56,23 +56,33 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
   const ws = wb.addWorksheet('내역', { views: [{ state: 'frozen', ySplit: 1 }] });
 
   ws.columns = [
-    { header: 'No', key: 'no', width: 6 },
-    { header: '일자', key: 'date', width: 14 },
-    { header: '구매처', key: 'merchant', width: 24 },
-    { header: '결제수단', key: 'paymentMethod', width: 12 },
-    { header: '작성자', key: 'createdByName', width: 14 },
+    { header: 'No', key: 'no', width: 5 },
+    { header: '일자', key: 'date', width: 12 },
+    { header: '구분', key: 'type', width: 10 },
+    { header: '카테고리', key: 'categoryId', width: 14 },
+    { header: '구매처', key: 'merchant', width: 20 },
+    { header: '내용', key: 'content', width: 20 },
     { header: '금액', key: 'amount', width: 14 },
-    { header: '메모', key: 'memo', width: 30 },
+    { header: '결제수단', key: 'paymentType', width: 10 },
+    { header: '카드', key: 'paymentCardLabel', width: 20 },
+    { header: '결제자', key: 'payerName', width: 12 },
+    { header: '이용자', key: 'userNames', width: 18 },
+    { header: '메모', key: 'memo', width: 24 },
   ];
 
   records.forEach((r, i) => {
     ws.addRow({
       no: i + 1,
       date: formatFullDate(r.date.toDate()),
+      type: r.type || '',
+      categoryId: r.categoryId || '',
       merchant: r.merchant,
-      paymentMethod: r.paymentMethod,
-      createdByName: r.createdByName || '',
+      content: r.content || '',
       amount: r.amount,
+      paymentType: r.paymentType || '',
+      paymentCardLabel: r.paymentCardLabel || '',
+      payerName: r.payerName || r.createdByName || '',
+      userNames: r.userNames || '',
       memo: r.memo || '',
     });
   });
@@ -81,10 +91,15 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
   const totalRow = ws.addRow({
     no: '',
     date: '',
+    type: '',
+    categoryId: '',
     merchant: '',
-    paymentMethod: '',
-    createdByName: '합계',
+    content: '',
     amount: total,
+    paymentType: '',
+    paymentCardLabel: '',
+    payerName: '합계',
+    userNames: '',
     memo: '',
   });
 

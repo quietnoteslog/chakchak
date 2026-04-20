@@ -1,5 +1,6 @@
 import {
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -17,7 +18,16 @@ import {
   deleteField,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Project, ProjectInput, UserProfile, ExpenseRecord, PaymentMethod, InvitedMember } from './types';
+import {
+  Project,
+  ProjectInput,
+  UserProfile,
+  ExpenseRecord,
+  PaymentCard,
+  InviteToken,
+  RecordType,
+  PaymentType,
+} from './types';
 
 export const USERS = 'users';
 export const PROJECTS = 'projects';
@@ -39,6 +49,11 @@ export async function upsertUserProfile(uid: string, email: string, displayName:
   }
 }
 
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  const snap = await getDoc(doc(db, USERS, uid));
+  return snap.exists() ? (snap.data() as UserProfile) : null;
+}
+
 // --- projects ---
 
 export async function createProject(
@@ -56,6 +71,8 @@ export async function createProject(
     memberIds: [ownerUid],
     memberNames: { [ownerUid]: ownerDisplayName },
     invitedMembers: [],
+    categories: [],
+    paymentCards: [],
     createdAt: serverTimestamp(),
   });
   return ref.id;
@@ -67,48 +84,16 @@ export async function listMyProjects(uid: string): Promise<Project[]> {
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Project, 'id'>) }));
 }
 
-// 초대받은 이메일을 가진 프로젝트 찾기 (invitedMembers 배열 안 객체 검색)
-// Firestore에서 배열 내 객체 필드로 쿼리 불가 → 전체 스캔 불가. 대안: email만 따로 indexed 배열 보조필드 둘까?
-// 간단 MVP: invitedMemberEmails 보조 배열을 함께 유지 (쿼리는 이 배열로, 수락 시 양쪽 동기화).
-export async function listPendingInvitations(email: string): Promise<Project[]> {
-  const q = query(collection(db, PROJECTS), where('invitedMemberEmails', 'array-contains', email));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Project, 'id'>) }));
-}
-
-export async function acceptInvitation(projectId: string, uid: string, email: string) {
-  const ref = doc(db, PROJECTS, projectId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
-  const data = snap.data() as Project & { invitedMemberEmails?: string[] };
-  const invited = (data.invitedMembers ?? []).find((m) => m.email === email);
-  const displayName = invited?.displayName ?? email.split('@')[0];
-  await updateDoc(ref, {
-    memberIds: arrayUnion(uid),
-    [`memberNames.${uid}`]: displayName,
-    invitedMembers: (data.invitedMembers ?? []).filter((m) => m.email !== email),
-    invitedMemberEmails: arrayRemove(email),
-  });
-}
-
 export async function getProject(projectId: string): Promise<Project | null> {
   const snap = await getDoc(doc(db, PROJECTS, projectId));
   return snap.exists() ? ({ id: snap.id, ...(snap.data() as Omit<Project, 'id'>) }) : null;
 }
 
-export async function inviteMember(projectId: string, email: string, displayName: string) {
-  const ref = doc(db, PROJECTS, projectId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('project not found');
-  const data = snap.data() as Project & { invitedMemberEmails?: string[] };
-  const normEmail = email.toLowerCase();
-  const existing = (data.invitedMembers ?? []).filter((m) => m.email !== normEmail);
-  existing.push({ email: normEmail, displayName });
-  await updateDoc(ref, {
-    invitedMembers: existing,
-    invitedMemberEmails: arrayUnion(normEmail),
-  });
+export async function deleteProject(projectId: string) {
+  await deleteDoc(doc(db, PROJECTS, projectId));
 }
+
+// --- member management ---
 
 export async function removeMember(projectId: string, uid: string) {
   const ref = doc(db, PROJECTS, projectId);
@@ -118,42 +103,146 @@ export async function removeMember(projectId: string, uid: string) {
   });
 }
 
-export async function cancelInvitation(projectId: string, email: string) {
-  const ref = doc(db, PROJECTS, projectId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
-  const data = snap.data() as Project & { invitedMemberEmails?: string[] };
-  const normEmail = email.toLowerCase();
-  await updateDoc(ref, {
-    invitedMembers: (data.invitedMembers ?? []).filter((m) => m.email !== normEmail),
-    invitedMemberEmails: arrayRemove(normEmail),
-  });
-}
-
 export async function updateMemberName(projectId: string, uid: string, displayName: string) {
   await updateDoc(doc(db, PROJECTS, projectId), {
     [`memberNames.${uid}`]: displayName,
   });
 }
 
-export async function deleteProject(projectId: string) {
-  await deleteDoc(doc(db, PROJECTS, projectId));
+// --- categories ---
+
+export async function addCategory(projectId: string, name: string) {
+  await updateDoc(doc(db, PROJECTS, projectId), {
+    categories: arrayUnion(name),
+  });
 }
 
-// --- user lookup (멤버 표시용) ---
+export async function removeCategory(projectId: string, name: string) {
+  await updateDoc(doc(db, PROJECTS, projectId), {
+    categories: arrayRemove(name),
+  });
+}
 
-export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  const snap = await getDoc(doc(db, USERS, uid));
-  return snap.exists() ? (snap.data() as UserProfile) : null;
+// --- payment cards ---
+
+export async function addPaymentCard(projectId: string, card: PaymentCard) {
+  const ref = doc(db, PROJECTS, projectId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('project not found');
+  const data = snap.data() as Project;
+  const cards = [...(data.paymentCards ?? []), card];
+  await updateDoc(ref, { paymentCards: cards });
+}
+
+export async function removePaymentCard(projectId: string, cardId: string) {
+  const ref = doc(db, PROJECTS, projectId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const data = snap.data() as Project;
+  const cards = (data.paymentCards ?? []).filter((c) => c.id !== cardId);
+  await updateDoc(ref, { paymentCards: cards });
+}
+
+// --- invite tokens (link-based invite) ---
+
+export const INVITE_TOKENS = 'inviteTokens';
+
+function generateToken(): string {
+  // 32자 랜덤 (a-z, A-Z, 0-9)
+  const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const arr = new Uint8Array(32);
+  if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
+    crypto.getRandomValues(arr);
+  } else {
+    for (let i = 0; i < arr.length; i++) arr[i] = Math.floor(Math.random() * 256);
+  }
+  let s = '';
+  for (let i = 0; i < arr.length; i++) s += alphabet[arr[i] % alphabet.length];
+  return s;
+}
+
+export async function createInviteToken(projectId: string, uid: string, days: number = 7): Promise<string> {
+  const token = generateToken();
+  const expiresAt = Timestamp.fromDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
+  await setDoc(doc(db, PROJECTS, projectId, INVITE_TOKENS, token), {
+    projectId,
+    createdBy: uid,
+    createdAt: serverTimestamp(),
+    expiresAt,
+    revoked: false,
+    useCount: 0,
+  });
+  return token;
+}
+
+export async function listInviteTokens(projectId: string): Promise<InviteToken[]> {
+  const q = query(collection(db, PROJECTS, projectId, INVITE_TOKENS), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<InviteToken, 'id'>) }));
+}
+
+export async function revokeInviteToken(projectId: string, token: string) {
+  await updateDoc(doc(db, PROJECTS, projectId, INVITE_TOKENS, token), { revoked: true });
+}
+
+// 토큰으로 프로젝트/토큰 정보 찾기 (collectionGroup 쿼리)
+export async function findInviteToken(token: string): Promise<{ projectId: string; data: InviteToken } | null> {
+  const q = query(collectionGroup(db, INVITE_TOKENS), where('__name__', '>=', ''));
+  // collectionGroup으로 도큐먼트 ID 검색은 불가하므로, 토큰 사용 시 프로젝트 ID를 URL에 같이 넣는 방식 권장
+  // 대신 각 프로젝트에서 검색하는 건 비효율적이니, URL 구조를 /invite/{projectId}/{token}으로 쓰자.
+  throw new Error('use getInviteTokenByProject instead');
+}
+
+export async function getInviteTokenByProject(projectId: string, token: string): Promise<InviteToken | null> {
+  const snap = await getDoc(doc(db, PROJECTS, projectId, INVITE_TOKENS, token));
+  return snap.exists() ? ({ id: snap.id, ...(snap.data() as Omit<InviteToken, 'id'>) }) : null;
+}
+
+// 토큰 사용 → 멤버 등록
+export async function acceptInviteByToken(
+  projectId: string,
+  token: string,
+  uid: string,
+  displayName: string
+): Promise<'ok' | 'already-member' | 'revoked' | 'expired' | 'not-found'> {
+  const tokenSnap = await getDoc(doc(db, PROJECTS, projectId, INVITE_TOKENS, token));
+  if (!tokenSnap.exists()) return 'not-found';
+  const tokenData = tokenSnap.data() as InviteToken;
+  if (tokenData.revoked) return 'revoked';
+  if (tokenData.expiresAt.toDate().getTime() < Date.now()) return 'expired';
+
+  const projectRef = doc(db, PROJECTS, projectId);
+  const projectSnap = await getDoc(projectRef);
+  if (!projectSnap.exists()) return 'not-found';
+  const project = projectSnap.data() as Project;
+
+  if (project.memberIds.includes(uid)) return 'already-member';
+
+  await updateDoc(projectRef, {
+    memberIds: arrayUnion(uid),
+    [`memberNames.${uid}`]: displayName,
+  });
+  await updateDoc(doc(db, PROJECTS, projectId, INVITE_TOKENS, token), {
+    useCount: (tokenData.useCount ?? 0) + 1,
+  });
+  return 'ok';
 }
 
 // --- records (경비 내역) ---
 
 export interface RecordInput {
-  amount: number;
   date: Date;
+  type: RecordType;
+  categoryId: string;
   merchant: string;
-  paymentMethod: PaymentMethod;
+  content: string;
+  amount: number;
+  paymentType: PaymentType;
+  paymentCardId: string;
+  paymentCardLabel: string;
+  payerId: string;
+  payerName: string;
+  userNames: string;
   memo: string;
   receiptUrl: string;
   receiptPath: string;
@@ -163,10 +252,18 @@ export interface RecordInput {
 export async function addRecord(projectId: string, uid: string, input: RecordInput): Promise<string> {
   const ref = await addDoc(collection(db, PROJECTS, projectId, 'records'), {
     projectId,
-    amount: input.amount,
     date: Timestamp.fromDate(input.date),
+    type: input.type,
+    categoryId: input.categoryId,
     merchant: input.merchant,
-    paymentMethod: input.paymentMethod,
+    content: input.content,
+    amount: input.amount,
+    paymentType: input.paymentType,
+    paymentCardId: input.paymentCardId,
+    paymentCardLabel: input.paymentCardLabel,
+    payerId: input.payerId,
+    payerName: input.payerName,
+    userNames: input.userNames,
     memo: input.memo,
     receiptUrl: input.receiptUrl,
     receiptPath: input.receiptPath,
@@ -177,10 +274,21 @@ export async function addRecord(projectId: string, uid: string, input: RecordInp
   return ref.id;
 }
 
+export async function updateRecord(projectId: string, recordId: string, patch: Partial<RecordInput>) {
+  const data: Record<string, unknown> = { ...patch, updatedAt: serverTimestamp() };
+  if (patch.date) data.date = Timestamp.fromDate(patch.date);
+  await updateDoc(doc(db, PROJECTS, projectId, 'records', recordId), data);
+}
+
 export async function listRecords(projectId: string): Promise<ExpenseRecord[]> {
   const q = query(collection(db, PROJECTS, projectId, 'records'), orderBy('date', 'desc'));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ExpenseRecord, 'id'>) }));
+}
+
+export async function getRecord(projectId: string, recordId: string): Promise<ExpenseRecord | null> {
+  const snap = await getDoc(doc(db, PROJECTS, projectId, 'records', recordId));
+  return snap.exists() ? ({ id: snap.id, ...(snap.data() as Omit<ExpenseRecord, 'id'>) }) : null;
 }
 
 export async function deleteRecord(projectId: string, recordId: string) {

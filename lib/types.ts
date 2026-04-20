@@ -12,6 +12,11 @@ export interface InvitedMember {
   displayName: string;
 }
 
+export interface PaymentCard {
+  id: string;
+  label: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -21,6 +26,8 @@ export interface Project {
   memberIds: string[];
   memberNames: Record<string, string>;
   invitedMembers: InvitedMember[];
+  categories: string[];
+  paymentCards: PaymentCard[];
   createdAt: Timestamp;
 }
 
@@ -32,23 +39,40 @@ export interface ProjectInput {
 
 export type MemberRole = 'owner' | 'member';
 
-export type PaymentMethod = '법인카드' | '개인카드' | '현금' | '기타';
+// 내역 구분
+export type RecordType = '영수증' | '세금계산서' | '간이영수증' | '견적서';
+export const RECORD_TYPES: RecordType[] = ['영수증', '세금계산서', '간이영수증', '견적서'];
 
+// 결제수단 대분류
+export type PaymentType = '법인카드' | '개인카드' | '현금';
+export const PAYMENT_TYPES: PaymentType[] = ['법인카드', '개인카드', '현금'];
+
+// 구 PaymentMethod 호환 (legacy record 마이그레이션 전까지)
+export type PaymentMethod = '법인카드' | '개인카드' | '현금' | '기타';
 export const PAYMENT_METHODS: PaymentMethod[] = ['법인카드', '개인카드', '현금', '기타'];
 
 export interface ExpenseRecord {
   id: string;
   projectId: string;
-  amount: number;
   date: Timestamp;
+  type: RecordType;
+  categoryId: string;
   merchant: string;
-  paymentMethod: PaymentMethod;
+  content: string;
+  amount: number;
+  paymentType: PaymentType;
+  paymentCardId: string;
+  paymentCardLabel: string;
+  payerId: string;
+  payerName: string;
+  userNames: string;
   memo: string;
   receiptUrl: string;
   receiptPath: string;
   createdBy: string;
   createdByName: string;
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface OcrResult {
@@ -56,4 +80,15 @@ export interface OcrResult {
   amount: number | null;
   date: string | null;
   confidence: number;
+}
+
+// 초대 링크 토큰
+export interface InviteToken {
+  id: string;               // Firestore doc id = token 값
+  projectId: string;
+  createdBy: string;
+  createdAt: Timestamp;
+  expiresAt: Timestamp;
+  revoked: boolean;
+  useCount: number;         // 사용 횟수 (통계용)
 }
