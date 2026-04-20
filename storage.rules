@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // 영수증: receipts/{projectId}/{filename}
+    // 로그인한 사용자 중 해당 프로젝트 멤버만 read/write
+    match /receipts/{projectId}/{filename} {
+      allow read: if request.auth != null
+                  && firestore.get(/databases/(default)/documents/projects/$(projectId)).data.memberIds.hasAny([request.auth.uid]);
+      allow create: if request.auth != null
+                    && firestore.get(/databases/(default)/documents/projects/$(projectId)).data.memberIds.hasAny([request.auth.uid])
+                    && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null
+                    && firestore.get(/databases/(default)/documents/projects/$(projectId)).data.memberIds.hasAny([request.auth.uid]);
+    }
+  }
+}

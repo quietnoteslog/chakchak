@@ -47,6 +47,24 @@ service cloud.firestore {
 
       // delete: owner만
       allow delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+
+      // projects/{projectId}/records/{recordId}: 경비 내역
+      match /records/{recordId} {
+        function isMember() {
+          return request.auth != null
+                 && get(/databases/$(database)/documents/projects/$(projectId)).data.memberIds.hasAny([request.auth.uid]);
+        }
+        function isOwner() {
+          return request.auth != null
+                 && request.auth.uid == get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId;
+        }
+
+        allow read: if isMember();
+        allow create: if isMember()
+                      && request.auth.uid == request.resource.data.createdBy;
+        allow update: if isOwner() || (isMember() && request.auth.uid == resource.data.createdBy);
+        allow delete: if isOwner() || (isMember() && request.auth.uid == resource.data.createdBy);
+      }
     }
   }
 }

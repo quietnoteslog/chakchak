@@ -9,13 +9,14 @@ import {
   deleteDoc,
   query,
   where,
+  orderBy,
   Timestamp,
   serverTimestamp,
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Project, ProjectInput, UserProfile } from './types';
+import { Project, ProjectInput, UserProfile, ExpenseRecord, PaymentMethod } from './types';
 
 export const USERS = 'users';
 export const PROJECTS = 'projects';
@@ -105,4 +106,44 @@ export async function deleteProject(projectId: string) {
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const snap = await getDoc(doc(db, USERS, uid));
   return snap.exists() ? (snap.data() as UserProfile) : null;
+}
+
+// --- records (경비 내역) ---
+
+export interface RecordInput {
+  amount: number;
+  date: Date;
+  merchant: string;
+  paymentMethod: PaymentMethod;
+  memo: string;
+  receiptUrl: string;
+  receiptPath: string;
+  createdByName: string;
+}
+
+export async function addRecord(projectId: string, uid: string, input: RecordInput): Promise<string> {
+  const ref = await addDoc(collection(db, PROJECTS, projectId, 'records'), {
+    projectId,
+    amount: input.amount,
+    date: Timestamp.fromDate(input.date),
+    merchant: input.merchant,
+    paymentMethod: input.paymentMethod,
+    memo: input.memo,
+    receiptUrl: input.receiptUrl,
+    receiptPath: input.receiptPath,
+    createdBy: uid,
+    createdByName: input.createdByName,
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function listRecords(projectId: string): Promise<ExpenseRecord[]> {
+  const q = query(collection(db, PROJECTS, projectId, 'records'), orderBy('date', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ExpenseRecord, 'id'>) }));
+}
+
+export async function deleteRecord(projectId: string, recordId: string) {
+  await deleteDoc(doc(db, PROJECTS, projectId, 'records', recordId));
 }

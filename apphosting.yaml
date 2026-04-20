@@ -46,3 +46,8 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  # Gemini API key -- 서버사이드 (API route)에서만 사용. 빌드/클라이언트 번들 노출 금지.
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    availability:
+      - RUNTIME
