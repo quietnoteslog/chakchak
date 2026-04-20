@@ -16,8 +16,8 @@ import {
   addPaymentCard,
   removePaymentCard,
 } from '@/lib/firestore';
-import { Project, ExpenseRecord } from '@/lib/types';
-import { exportRecordsToExcel, exportReceiptsAsZip, downloadSingleReceipt } from '@/lib/export';
+import { Project, ExpenseRecord, RECORD_TYPES, PAYMENT_TYPES } from '@/lib/types';
+import { exportRecordsToExcel, exportRecordsToPdf, exportReceiptsAsZip, downloadSingleReceipt } from '@/lib/export';
 
 const ALL_TAB = '__all__';
 
@@ -38,6 +38,13 @@ export default function ProjectDetailPage() {
   const [newCategory2, setNewCategory2] = useState('');
   const [cardBank, setCardBank] = useState('');
   const [cardNumber, setCardNumber] = useState('');
+  // 필터
+  const [filterType, setFilterType] = useState<string>('');           // 구분
+  const [filterCategory2, setFilterCategory2] = useState<string>(''); // 카테고리2
+  const [filterPayer, setFilterPayer] = useState<string>('');         // 결제자 uid
+  const [filterPaymentType, setFilterPaymentType] = useState<string>(''); // 결제수단
+  const [filterQuery, setFilterQuery] = useState<string>('');         // 검색어
+  const [showFilter, setShowFilter] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -79,8 +86,24 @@ export default function ProjectDetailPage() {
   if (loading || !user) return null;
 
   const isOwner = project?.ownerId === user.uid;
-  const visibleRecords = selectedTab === ALL_TAB ? records : records.filter((r) => r.categoryId === selectedTab);
+  const q = filterQuery.trim().toLowerCase();
+  const visibleRecords = records.filter((r) => {
+    if (selectedTab !== ALL_TAB && r.categoryId !== selectedTab) return false;
+    if (filterType && r.type !== filterType) return false;
+    if (filterCategory2 && r.categoryId2 !== filterCategory2) return false;
+    if (filterPayer && r.payerId !== filterPayer) return false;
+    if (filterPaymentType && r.paymentType !== filterPaymentType) return false;
+    if (q) {
+      const hay = `${r.merchant ?? ''} ${r.content ?? ''} ${r.memo ?? ''} ${r.userNames ?? ''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
   const total = visibleRecords.reduce((s, r) => s + (r.amount ?? 0), 0);
+  const activeFilterCount = [filterType, filterCategory2, filterPayer, filterPaymentType, q].filter(Boolean).length;
+  const resetFilters = () => {
+    setFilterType(''); setFilterCategory2(''); setFilterPayer(''); setFilterPaymentType(''); setFilterQuery('');
+  };
 
   const onDeleteProject = async () => {
     if (!project || !isOwner) return;
@@ -97,6 +120,20 @@ export default function ProjectDetailPage() {
   const onExportExcel = () => {
     if (!project || visibleRecords.length === 0) return;
     try { exportRecordsToExcel(project, visibleRecords); } catch (e) { console.error(e); alert('엑셀 생성 실패'); }
+  };
+
+  const onExportPdf = () => {
+    if (!project || visibleRecords.length === 0) return;
+    const filterSummary = buildFilterSummary({
+      tab: selectedTab === ALL_TAB ? '' : selectedTab,
+      type: filterType,
+      category2: filterCategory2,
+      payer: filterPayer ? (project.memberNames?.[filterPayer] ?? filterPayer) : '',
+      paymentType: filterPaymentType,
+      query: q,
+    });
+    try { exportRecordsToPdf(project, visibleRecords, filterSummary); }
+    catch (e) { console.error(e); alert('PDF 생성 실패'); }
   };
 
   const onExportZip = async () => {
@@ -280,10 +317,60 @@ export default function ProjectDetailPage() {
               })}
             </div>
 
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button onClick={() => setShowFilter(!showFilter)} style={{ ...btnSmall, background: showFilter ? '#eef4ff' : '#fff', color: showFilter ? '#4a6bc4' : '#333' }}>
+                🔍 필터 {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
+              </button>
+              {activeFilterCount > 0 && (
+                <button onClick={resetFilters} style={{ ...btnSmall, color: '#c33', borderColor: '#f0c8c8' }}>초기화</button>
+              )}
+            </div>
+
+            {showFilter && (
+              <section style={{ ...settingsBox, marginBottom: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+                  <label style={{ display: 'grid', gap: 4 }}>
+                    <span style={filterLabel}>구분</span>
+                    <select value={filterType} onChange={(e) => setFilterType(e.target.value)} style={inlineInput}>
+                      <option value="">전체</option>
+                      {RECORD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </label>
+                  <label style={{ display: 'grid', gap: 4 }}>
+                    <span style={filterLabel}>카테고리2</span>
+                    <select value={filterCategory2} onChange={(e) => setFilterCategory2(e.target.value)} style={inlineInput}>
+                      <option value="">전체</option>
+                      {(project.categories2 ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </label>
+                  <label style={{ display: 'grid', gap: 4 }}>
+                    <span style={filterLabel}>결제수단</span>
+                    <select value={filterPaymentType} onChange={(e) => setFilterPaymentType(e.target.value)} style={inlineInput}>
+                      <option value="">전체</option>
+                      {PAYMENT_TYPES.map((pt) => <option key={pt} value={pt}>{pt}</option>)}
+                    </select>
+                  </label>
+                  <label style={{ display: 'grid', gap: 4 }}>
+                    <span style={filterLabel}>결제자</span>
+                    <select value={filterPayer} onChange={(e) => setFilterPayer(e.target.value)} style={inlineInput}>
+                      <option value="">전체</option>
+                      {project.memberIds.map((uid) => (
+                        <option key={uid} value={uid}>{(project.memberNames ?? {})[uid] ?? uid}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label style={{ display: 'grid', gap: 4, gridColumn: '1 / -1' }}>
+                    <span style={filterLabel}>검색어 (구매처/내용/메모/이용자)</span>
+                    <input value={filterQuery} onChange={(e) => setFilterQuery(e.target.value)} placeholder="예: 이마트" style={inlineInput} />
+                  </label>
+                </div>
+              </section>
+            )}
+
             <div style={summaryBox}>
               <div>
                 <div style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>
-                  {selectedTab === ALL_TAB ? '전체 지출' : `${selectedTab} 소계`}
+                  {activeFilterCount > 0 || selectedTab !== ALL_TAB ? '필터 소계' : '전체 지출'}
                 </div>
                 <div style={{ fontSize: 20, fontWeight: 700 }}>{formatMoney(total)}원</div>
               </div>
@@ -296,6 +383,7 @@ export default function ProjectDetailPage() {
                 {visibleRecords.length > 0 && (
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={onExportExcel} style={btnSmall}>📊 엑셀</button>
+                    <button onClick={onExportPdf} style={btnSmall}>📄 PDF</button>
                     <button onClick={onExportZip} disabled={!!zipProgress} style={{ ...btnSmall, color: zipProgress ? '#999' : '#333' }}>
                       {zipProgress ? `Zip ${zipProgress.done}/${zipProgress.total}` : '📦 Zip'}
                     </button>
@@ -425,3 +513,15 @@ const tdStyle: React.CSSProperties = { padding: '10px 10px', fontSize: 12, color
 const tag: React.CSSProperties = { fontSize: 10, padding: '2px 6px', background: '#f0f2f8', color: '#555', borderRadius: 4 };
 const linkBtn: React.CSSProperties = { fontSize: 11, background: 'none', border: 'none', color: '#7b9fe8', cursor: 'pointer', padding: 0, textDecoration: 'none' };
 const miniBtn: React.CSSProperties = { padding: '4px 8px', fontSize: 11, background: '#fff', border: '1px solid #d0d6e2', borderRadius: 4, color: '#555', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' };
+const filterLabel: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: '#666' };
+
+function buildFilterSummary(f: { tab: string; type: string; category2: string; payer: string; paymentType: string; query: string }): string {
+  const parts: string[] = [];
+  if (f.tab) parts.push(`카테고리1: ${f.tab}`);
+  if (f.type) parts.push(`구분: ${f.type}`);
+  if (f.category2) parts.push(`카테고리2: ${f.category2}`);
+  if (f.paymentType) parts.push(`결제수단: ${f.paymentType}`);
+  if (f.payer) parts.push(`결제자: ${f.payer}`);
+  if (f.query) parts.push(`검색어: ${f.query}`);
+  return parts.join(' · ');
+}

@@ -188,6 +188,100 @@ export async function exportReceiptsAsZip(
   triggerDownload(zipBlob, `${safeProject}_영수증_${formatDateShort(new Date())}.zip`);
 }
 
+export function exportRecordsToPdf(project: Project, records: ExpenseRecord[], filterSummary: string = '') {
+  const total = records.reduce((s, r) => s + (r.amount ?? 0), 0);
+  const projectName = escapeHtml(project.name);
+  const periodStart = formatFullDate(project.startDate.toDate());
+  const periodEnd = project.endDate ? formatFullDate(project.endDate.toDate()) : '';
+  const generatedAt = formatFullDate(new Date());
+
+  const rowsHtml = records.map((r, i) => `
+    <tr>
+      <td style="text-align:center;color:#888">${i + 1}</td>
+      <td style="white-space:nowrap">${formatFullDate(r.date.toDate())}</td>
+      <td>${escapeHtml(r.type || '')}</td>
+      <td>${escapeHtml(r.categoryId || '-')}</td>
+      <td>${escapeHtml(r.categoryId2 || '-')}</td>
+      <td style="font-weight:600">${escapeHtml(r.merchant)}</td>
+      <td>${escapeHtml(r.content || '-')}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums">${(r.amount ?? 0).toLocaleString('ko-KR')}</td>
+      <td>${escapeHtml(r.paymentType || '')}${r.paymentCardLabel ? `<br><span style="font-size:9px;color:#888">${escapeHtml(r.paymentCardLabel)}</span>` : ''}</td>
+      <td>${escapeHtml(r.payerName || r.createdByName || '-')}</td>
+      <td>${escapeHtml(r.userNames || '-')}</td>
+      <td>${escapeHtml(r.memo || '-')}</td>
+    </tr>
+  `).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>${projectName} 경비 내역 ${generatedAt}</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: #222; margin: 0; padding: 20px; font-size: 10px; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .meta { color: #666; font-size: 10px; margin-bottom: 4px; }
+  .filter { font-size: 10px; color: #4a6bc4; margin-bottom: 10px; padding: 6px 8px; background: #eef4ff; border-radius: 4px; }
+  .summary { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #ddd; }
+  .summary .total { font-size: 14px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+  th { background: #7B9FE8; color: #fff; padding: 6px 5px; font-weight: 700; text-align: left; border: 1px solid #C8D4EF; }
+  td { padding: 5px 5px; border: 1px solid #eef1f7; vertical-align: top; }
+  tr:nth-child(even) td { background: #F7F9FD; }
+  tfoot td { font-weight: 700; background: #E8EFFF; border-top: 2px solid #7B9FE8; padding: 6px 5px; }
+  .footer { margin-top: 12px; font-size: 9px; color: #888; text-align: right; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+  <h1>${projectName}</h1>
+  <div class="meta">프로젝트 기간: ${periodStart}${periodEnd ? ' ~ ' + periodEnd : ''} / 발행일: ${generatedAt}</div>
+  ${filterSummary ? `<div class="filter">필터: ${escapeHtml(filterSummary)}</div>` : ''}
+  <div class="summary">
+    <div>총 ${records.length}건</div>
+    <div class="total">합계 ${total.toLocaleString('ko-KR')}원</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:3%">No</th>
+        <th style="width:7%">일자</th>
+        <th style="width:6%">구분</th>
+        <th style="width:8%">카테고리1</th>
+        <th style="width:8%">카테고리2</th>
+        <th style="width:12%">구매처</th>
+        <th style="width:10%">내용</th>
+        <th style="width:8%">금액</th>
+        <th style="width:9%">결제수단</th>
+        <th style="width:7%">결제자</th>
+        <th style="width:9%">이용자</th>
+        <th style="width:13%">메모</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="7" style="text-align:right">합계</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${total.toLocaleString('ko-KR')}</td>
+        <td colspan="4"></td>
+      </tr>
+    </tfoot>
+  </table>
+  <div class="footer">착착 - ${projectName}</div>
+  <script>
+    window.addEventListener('load', () => { setTimeout(() => window.print(), 300); });
+  </script>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { alert('팝업 차단을 해제하고 다시 시도해주세요'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
+function escapeHtml(s: string): string {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+}
+
 export async function downloadSingleReceipt(record: ExpenseRecord, projectName: string, index: number) {
   const blob = await fetchReceiptBlob(record.receiptPath, record.receiptUrl);
   const ext = extFromBlob(blob, 'jpg');
