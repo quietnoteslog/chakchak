@@ -110,8 +110,9 @@ export default function NewRecordPage() {
     setError(null);
     setStage('saving');
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const filename = `${Date.now()}.${ext}`;
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const rand = Math.random().toString(36).slice(2, 10);
+      const filename = `${Date.now()}_${rand}.${ext}`;
       const path = `receipts/${project.id}/${filename}`;
       const ref = storageRef(storage, path);
       const snapshot = await uploadBytes(ref, file, { contentType: file.type });
