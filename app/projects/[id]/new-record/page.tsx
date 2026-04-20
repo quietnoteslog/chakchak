@@ -75,12 +75,15 @@ export default function NewRecordPage() {
   const runOcr = async (f: File) => {
     setStage('ocr');
     try {
-      const base64 = await fileToBase64(f);
-      const res = await fetch('/api/ocr/receipt', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mimeType: f.type }),
-      });
+      const isPdf = f.type === 'application/pdf';
+      const form = new FormData();
+      if (isPdf) {
+        form.append('image', f);
+      } else {
+        const resized = await resizeImageForOcr(f, 1600);
+        form.append('image', resized, 'ocr.jpg');
+      }
+      const res = await fetch('/api/ocr/receipt', { method: 'POST', body: form });
       if (!res.ok) throw new Error(await res.text());
       const result: OcrResult = await res.json();
       setOcr(result);
@@ -277,17 +280,34 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(',')[1] ?? '';
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+async function resizeImageForOcr(file: File, maxDim: number): Promise<Blob> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('image load failed'));
+      img.src = url;
+    });
+    const ratio = Math.min(maxDim / img.width, maxDim / img.height, 1);
+    const w = Math.max(1, Math.round(img.width * ratio));
+    const h = Math.max(1, Math.round(img.height * ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('canvas ctx null');
+    ctx.drawImage(img, 0, 0, w, h);
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error('toBlob null'))),
+        'image/jpeg',
+        0.85
+      );
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 const inputStyle: React.CSSProperties = {
