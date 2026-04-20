@@ -55,12 +55,14 @@ export default function NewRecordPage() {
   const onFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (!f.type.startsWith('image/')) {
-      setError('이미지 파일만 업로드할 수 있습니다');
+    const isImage = f.type.startsWith('image/');
+    const isPdf = f.type === 'application/pdf';
+    if (!isImage && !isPdf) {
+      setError('이미지 또는 PDF 파일만 업로드할 수 있습니다');
       return;
     }
     if (f.size > 10 * 1024 * 1024) {
-      setError('10MB 이하 이미지만 업로드할 수 있습니다');
+      setError('10MB 이하 파일만 업로드할 수 있습니다');
       return;
     }
     setError(null);
@@ -162,10 +164,10 @@ export default function NewRecordPage() {
           >
             <span style={{ fontSize: 36, marginBottom: 8 }}>📷</span>
             <strong style={{ fontSize: 16, marginBottom: 4, color: '#333' }}>영수증 촬영 또는 선택</strong>
-            <span style={{ fontSize: 12, color: '#888' }}>JPG, PNG 등 이미지 파일 (최대 10MB)</span>
+            <span style={{ fontSize: 12, color: '#888' }}>JPG, PNG, PDF 파일 (최대 10MB)</span>
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,application/pdf"
               capture="environment"
               onChange={onFileChange}
               style={{ display: 'none' }}
@@ -175,12 +177,20 @@ export default function NewRecordPage() {
 
         {file && previewUrl && (
           <div style={{ marginBottom: 16 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={previewUrl}
-              alt="영수증 미리보기"
-              style={{ width: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 8, background: '#fff', border: '1px solid #e5e9f2' }}
-            />
+            {file.type === 'application/pdf' ? (
+              <div style={{ padding: 40, background: '#fff', border: '1px solid #e5e9f2', borderRadius: 8, textAlign: 'center' }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>📄</div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{file.name}</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{(file.size / 1024).toFixed(0)} KB</div>
+              </div>
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={previewUrl}
+                alt="영수증 미리보기"
+                style={{ width: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 8, background: '#fff', border: '1px solid #e5e9f2' }}
+              />
+            )}
             {stage !== 'saving' && (
               <button
                 type="button"

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const prompt = `이 영수증 이미지에서 정보를 추출해 아래 JSON 스키마로만 응답하세요. 설명, 마크다운 블록 없이 순수 JSON만.
 

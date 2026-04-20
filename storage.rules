@@ -11,7 +11,8 @@ service firebase.storage {
       allow create: if request.auth != null
                     && firestore.get(/databases/(default)/documents/projects/$(projectId)).data.memberIds.hasAny([request.auth.uid])
                     && request.resource.size < 10 * 1024 * 1024
-                    && request.resource.contentType.matches('image/.*');
+                    && (request.resource.contentType.matches('image/.*')
+                        || request.resource.contentType == 'application/pdf');
       allow delete: if request.auth != null
                     && firestore.get(/databases/(default)/documents/projects/$(projectId)).data.memberIds.hasAny([request.auth.uid]);
     }
