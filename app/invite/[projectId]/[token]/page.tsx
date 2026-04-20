@@ -130,15 +130,21 @@ export default function InviteAcceptPage() {
 
         {status === 'needLogin' && (
           <>
-            <p style={{ textAlign: 'center', fontSize: 13, color: '#555', marginBottom: 20 }}>
-              프로젝트에 참여하려면 Google 로그인이 필요합니다.
+            <p style={{ textAlign: 'center', fontSize: 13, color: '#555', marginBottom: 16 }}>
+              프로젝트에 참여하려면 로그인이 필요합니다.
             </p>
             <button
               onClick={signInWithGoogle}
-              style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: '#fff', color: '#444', fontSize: 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
+              style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid #d0d6e2', background: '#fff', color: '#444', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 10 }}
             >
               Google로 로그인
             </button>
+            <a
+              href={`/login?redirect=/invite/${projectId}/${token}`}
+              style={{ display: 'block', width: '100%', padding: '12px 0', borderRadius: 10, background: '#7b9fe8', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}
+            >
+              이메일로 로그인 / 가입
+            </a>
           </>
         )}
 
