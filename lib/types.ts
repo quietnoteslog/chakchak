@@ -7,6 +7,11 @@ export interface UserProfile {
   createdAt: Timestamp;
 }
 
+export interface InvitedMember {
+  email: string;
+  displayName: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -14,7 +19,8 @@ export interface Project {
   endDate: Timestamp | null;
   ownerId: string;
   memberIds: string[];
-  invitedEmails: string[];
+  memberNames: Record<string, string>;
+  invitedMembers: InvitedMember[];
   createdAt: Timestamp;
 }
 

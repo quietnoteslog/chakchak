@@ -21,27 +21,28 @@ service cloud.firestore {
       allow read: if request.auth != null
                   && (
                     request.auth.uid in resource.data.memberIds
-                    || request.auth.token.email in resource.data.invitedEmails
+                    || request.auth.token.email in resource.data.invitedMemberEmails
                   );
 
-      // create: 로그인 사용자 본인이 owner이고 memberIds에 본인 포함
+      // create: 본인이 owner이고 memberIds에 본인 포함 + memberNames에 본인 포함
       allow create: if request.auth != null
                     && request.auth.uid == request.resource.data.ownerId
-                    && request.auth.uid in request.resource.data.memberIds;
+                    && request.auth.uid in request.resource.data.memberIds
+                    && request.resource.data.memberNames[request.auth.uid] is string;
 
-      // update: owner는 전체 수정 가능 / 초대받은 사용자는 자기 uid 추가 + 자기 email 제거만
+      // update: owner 전체 가능 / 초대받은 사용자는 자기 uid 추가(수락) 한정
       allow update: if request.auth != null
                     && (
                       request.auth.uid == resource.data.ownerId
                       || (
-                        request.auth.token.email in resource.data.invitedEmails
+                        request.auth.token.email in resource.data.invitedMemberEmails
                         && request.resource.data.ownerId == resource.data.ownerId
                         && request.resource.data.name == resource.data.name
                         && request.resource.data.createdAt == resource.data.createdAt
                         && request.resource.data.startDate == resource.data.startDate
                         && request.resource.data.endDate == resource.data.endDate
                         && request.auth.uid in request.resource.data.memberIds
-                        && !(request.auth.token.email in request.resource.data.invitedEmails)
+                        && !(request.auth.token.email in request.resource.data.invitedMemberEmails)
                       )
                     );
 

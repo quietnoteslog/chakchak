@@ -121,6 +121,7 @@ export default function NewRecordPage() {
       const snapshot = await uploadBytes(ref, file, { contentType: file.type });
       const url = await getDownloadURL(snapshot.ref);
 
+      const projectName = project.memberNames?.[user.uid] ?? user.displayName ?? user.email ?? '';
       await addRecord(project.id, user.uid, {
         amount: amt,
         date: new Date(date),
@@ -129,7 +130,7 @@ export default function NewRecordPage() {
         memo: memo.trim(),
         receiptUrl: url,
         receiptPath: path,
-        createdByName: user.displayName ?? user.email ?? '',
+        createdByName: projectName,
       });
       router.replace(`/projects/${project.id}`);
     } catch (err) {

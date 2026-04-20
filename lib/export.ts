@@ -1,5 +1,7 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
+import { ref as storageRef, getBlob } from 'firebase/storage';
+import { storage } from './firebase';
 import { Project, ExpenseRecord } from './types';
 
 function sanitize(s: string): string {
@@ -8,6 +10,10 @@ function sanitize(s: string): string {
 
 function formatDateShort(d: Date): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function formatFullDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function extFromBlob(blob: Blob, fallback: string): string {
@@ -32,48 +38,98 @@ function triggerDownload(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function exportRecordsToExcel(project: Project, records: ExpenseRecord[]) {
-  const rows: Record<string, string | number>[] = records.map((r, i) => ({
-    'No': i + 1,
-    '일자': formatFullDate(r.date.toDate()),
-    '가맹점': r.merchant,
-    '결제수단': r.paymentMethod,
-    '작성자': r.createdByName || '',
-    '금액': r.amount,
-    '메모': r.memo || '',
-  }));
-  const total = records.reduce((s, r) => s + (r.amount ?? 0), 0);
-  rows.push({
-    'No': '',
-    '일자': '',
-    '가맹점': '',
-    '결제수단': '',
-    '작성자': '합계',
-    '금액': total,
-    '메모': '',
-  });
+// Firebase SDK getBlob 사용 -- fetch CORS 이슈 회피
+async function fetchReceiptBlob(receiptPath: string, fallbackUrl: string): Promise<Blob> {
+  try {
+    return await getBlob(storageRef(storage, receiptPath));
+  } catch (e) {
+    // 경로 없으면 URL로 fallback 시도
+    console.warn('getBlob failed, fallback to fetch', e);
+    const res = await fetch(fallbackUrl);
+    if (!res.ok) throw new Error(`fetch ${res.status}`);
+    return await res.blob();
+  }
+}
 
-  const ws = XLSX.utils.json_to_sheet(rows);
-  // 열 너비
-  ws['!cols'] = [
-    { wch: 5 },   // No
-    { wch: 12 },  // 일자
-    { wch: 24 },  // 가맹점
-    { wch: 10 },  // 결제수단
-    { wch: 14 },  // 작성자
-    { wch: 12 },  // 금액
-    { wch: 30 },  // 메모
+export async function exportRecordsToExcel(project: Project, records: ExpenseRecord[]) {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('내역', { views: [{ state: 'frozen', ySplit: 1 }] });
+
+  ws.columns = [
+    { header: 'No', key: 'no', width: 6 },
+    { header: '일자', key: 'date', width: 14 },
+    { header: '구매처', key: 'merchant', width: 24 },
+    { header: '결제수단', key: 'paymentMethod', width: 12 },
+    { header: '작성자', key: 'createdByName', width: 14 },
+    { header: '금액', key: 'amount', width: 14 },
+    { header: '메모', key: 'memo', width: 30 },
   ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '내역');
 
-  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-  const blob = new Blob([buf], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  records.forEach((r, i) => {
+    ws.addRow({
+      no: i + 1,
+      date: formatFullDate(r.date.toDate()),
+      merchant: r.merchant,
+      paymentMethod: r.paymentMethod,
+      createdByName: r.createdByName || '',
+      amount: r.amount,
+      memo: r.memo || '',
+    });
   });
+
+  const total = records.reduce((s, r) => s + (r.amount ?? 0), 0);
+  const totalRow = ws.addRow({
+    no: '',
+    date: '',
+    merchant: '',
+    paymentMethod: '',
+    createdByName: '합계',
+    amount: total,
+    memo: '',
+  });
+
+  // 헤더 스타일
+  const headerRow = ws.getRow(1);
+  headerRow.height = 24;
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF7B9FE8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FFC8D4EF' } },
+      left: { style: 'thin', color: { argb: 'FFC8D4EF' } },
+      bottom: { style: 'thin', color: { argb: 'FFC8D4EF' } },
+      right: { style: 'thin', color: { argb: 'FFC8D4EF' } },
+    };
+  });
+
+  // 데이터 행 스타일 (zebra)
+  for (let i = 2; i < 2 + records.length; i++) {
+    const row = ws.getRow(i);
+    if (i % 2 === 0) {
+      row.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F9FD' } };
+      });
+    }
+    row.getCell('amount').numFmt = '#,##0';
+    row.alignment = { vertical: 'middle' };
+  }
+
+  // 합계 행 스타일
+  totalRow.eachCell((cell) => {
+    cell.font = { bold: true, size: 12 };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EFFF' } };
+    cell.border = {
+      top: { style: 'medium', color: { argb: 'FF7B9FE8' } },
+    };
+  });
+  totalRow.getCell('amount').numFmt = '#,##0';
+  totalRow.getCell('amount').alignment = { horizontal: 'right' };
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const safeName = sanitize(project.name);
-  const today = formatDateShort(new Date());
-  triggerDownload(blob, `${safeName}_내역_${today}.xlsx`);
+  triggerDownload(blob, `${safeName}_내역_${formatDateShort(new Date())}.xlsx`);
 }
 
 export async function exportReceiptsAsZip(
@@ -83,43 +139,43 @@ export async function exportReceiptsAsZip(
 ) {
   const zip = new JSZip();
   const safeProject = sanitize(project.name);
+  let added = 0;
 
   for (let i = 0; i < records.length; i++) {
     const r = records[i];
+    if (!r.receiptPath && !r.receiptUrl) {
+      onProgress?.(i + 1, records.length);
+      continue;
+    }
     try {
-      const res = await fetch(r.receiptUrl);
-      if (!res.ok) throw new Error(`fetch failed ${res.status}`);
-      const blob = await res.blob();
+      const blob = await fetchReceiptBlob(r.receiptPath, r.receiptUrl);
       const ext = extFromBlob(blob, 'jpg');
       const no = String(i + 1).padStart(3, '0');
       const dateStr = formatDateShort(r.date.toDate());
       const merchant = sanitize(r.merchant) || 'unknown';
       const filename = `${safeProject}_${no}_${merchant}_${dateStr}.${ext}`;
       zip.file(filename, blob);
+      added++;
     } catch (e) {
       console.error('receipt fetch failed', r.id, e);
     }
     onProgress?.(i + 1, records.length);
   }
 
+  if (added === 0) {
+    throw new Error('다운로드할 영수증이 없습니다');
+  }
+
   const zipBlob = await zip.generateAsync({ type: 'blob' });
-  const today = formatDateShort(new Date());
-  triggerDownload(zipBlob, `${safeProject}_영수증_${today}.zip`);
+  triggerDownload(zipBlob, `${safeProject}_영수증_${formatDateShort(new Date())}.zip`);
 }
 
 export async function downloadSingleReceipt(record: ExpenseRecord, projectName: string, index: number) {
-  const res = await fetch(record.receiptUrl);
-  if (!res.ok) throw new Error('fetch failed');
-  const blob = await res.blob();
+  const blob = await fetchReceiptBlob(record.receiptPath, record.receiptUrl);
   const ext = extFromBlob(blob, 'jpg');
   const no = String(index + 1).padStart(3, '0');
   const dateStr = formatDateShort(record.date.toDate());
   const merchant = sanitize(record.merchant) || 'unknown';
   const safeProject = sanitize(projectName);
-  const filename = `${safeProject}_${no}_${merchant}_${dateStr}.${ext}`;
-  triggerDownload(blob, filename);
-}
-
-function formatFullDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  triggerDownload(blob, `${safeProject}_${no}_${merchant}_${dateStr}.${ext}`);
 }

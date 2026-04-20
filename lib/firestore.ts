@@ -14,9 +14,10 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
+  deleteField,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Project, ProjectInput, UserProfile, ExpenseRecord, PaymentMethod } from './types';
+import { Project, ProjectInput, UserProfile, ExpenseRecord, PaymentMethod, InvitedMember } from './types';
 
 export const USERS = 'users';
 export const PROJECTS = 'projects';
@@ -40,7 +41,12 @@ export async function upsertUserProfile(uid: string, email: string, displayName:
 
 // --- projects ---
 
-export async function createProject(ownerUid: string, ownerEmail: string, input: ProjectInput): Promise<string> {
+export async function createProject(
+  ownerUid: string,
+  ownerEmail: string,
+  ownerDisplayName: string,
+  input: ProjectInput
+): Promise<string> {
   const ref = await addDoc(collection(db, PROJECTS), {
     name: input.name,
     startDate: Timestamp.fromDate(input.startDate),
@@ -48,7 +54,8 @@ export async function createProject(ownerUid: string, ownerEmail: string, input:
     ownerId: ownerUid,
     ownerEmail,
     memberIds: [ownerUid],
-    invitedEmails: [],
+    memberNames: { [ownerUid]: ownerDisplayName },
+    invitedMembers: [],
     createdAt: serverTimestamp(),
   });
   return ref.id;
@@ -60,17 +67,27 @@ export async function listMyProjects(uid: string): Promise<Project[]> {
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Project, 'id'>) }));
 }
 
+// 초대받은 이메일을 가진 프로젝트 찾기 (invitedMembers 배열 안 객체 검색)
+// Firestore에서 배열 내 객체 필드로 쿼리 불가 → 전체 스캔 불가. 대안: email만 따로 indexed 배열 보조필드 둘까?
+// 간단 MVP: invitedMemberEmails 보조 배열을 함께 유지 (쿼리는 이 배열로, 수락 시 양쪽 동기화).
 export async function listPendingInvitations(email: string): Promise<Project[]> {
-  const q = query(collection(db, PROJECTS), where('invitedEmails', 'array-contains', email));
+  const q = query(collection(db, PROJECTS), where('invitedMemberEmails', 'array-contains', email));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Project, 'id'>) }));
 }
 
 export async function acceptInvitation(projectId: string, uid: string, email: string) {
   const ref = doc(db, PROJECTS, projectId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const data = snap.data() as Project & { invitedMemberEmails?: string[] };
+  const invited = (data.invitedMembers ?? []).find((m) => m.email === email);
+  const displayName = invited?.displayName ?? email.split('@')[0];
   await updateDoc(ref, {
     memberIds: arrayUnion(uid),
-    invitedEmails: arrayRemove(email),
+    [`memberNames.${uid}`]: displayName,
+    invitedMembers: (data.invitedMembers ?? []).filter((m) => m.email !== email),
+    invitedMemberEmails: arrayRemove(email),
   });
 }
 
@@ -79,21 +96,43 @@ export async function getProject(projectId: string): Promise<Project | null> {
   return snap.exists() ? ({ id: snap.id, ...(snap.data() as Omit<Project, 'id'>) }) : null;
 }
 
-export async function inviteMember(projectId: string, email: string) {
-  await updateDoc(doc(db, PROJECTS, projectId), {
-    invitedEmails: arrayUnion(email.toLowerCase()),
+export async function inviteMember(projectId: string, email: string, displayName: string) {
+  const ref = doc(db, PROJECTS, projectId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('project not found');
+  const data = snap.data() as Project & { invitedMemberEmails?: string[] };
+  const normEmail = email.toLowerCase();
+  const existing = (data.invitedMembers ?? []).filter((m) => m.email !== normEmail);
+  existing.push({ email: normEmail, displayName });
+  await updateDoc(ref, {
+    invitedMembers: existing,
+    invitedMemberEmails: arrayUnion(normEmail),
   });
 }
 
 export async function removeMember(projectId: string, uid: string) {
-  await updateDoc(doc(db, PROJECTS, projectId), {
+  const ref = doc(db, PROJECTS, projectId);
+  await updateDoc(ref, {
     memberIds: arrayRemove(uid),
+    [`memberNames.${uid}`]: deleteField(),
   });
 }
 
 export async function cancelInvitation(projectId: string, email: string) {
+  const ref = doc(db, PROJECTS, projectId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const data = snap.data() as Project & { invitedMemberEmails?: string[] };
+  const normEmail = email.toLowerCase();
+  await updateDoc(ref, {
+    invitedMembers: (data.invitedMembers ?? []).filter((m) => m.email !== normEmail),
+    invitedMemberEmails: arrayRemove(normEmail),
+  });
+}
+
+export async function updateMemberName(projectId: string, uid: string, displayName: string) {
   await updateDoc(doc(db, PROJECTS, projectId), {
-    invitedEmails: arrayRemove(email.toLowerCase()),
+    [`memberNames.${uid}`]: displayName,
   });
 }
 

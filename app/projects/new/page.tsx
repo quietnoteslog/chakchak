@@ -29,11 +29,16 @@ export default function NewProjectPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const id = await createProject(user.uid, user.email ?? '', {
-        name: name.trim(),
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-      });
+      const id = await createProject(
+        user.uid,
+        user.email ?? '',
+        user.displayName ?? user.email?.split('@')[0] ?? '',
+        {
+          name: name.trim(),
+          startDate: new Date(startDate),
+          endDate: endDate ? new Date(endDate) : null,
+        }
+      );
       router.replace(`/projects/${id}`);
     } catch (err) {
       console.error(err);
