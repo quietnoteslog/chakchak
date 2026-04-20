@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, FormEvent, ChangeEvent, DragEvent } from 'react';
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { addRecord, updateRecord, RecordInput } from '@/lib/firestore';
@@ -33,6 +33,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [ocr, setOcr] = useState<OcrResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   const [type, setType] = useState<RecordType>(existing?.type ?? '영수증');
   const [categoryId, setCategoryId] = useState<string>(existing?.categoryId ?? ((project.categories ?? [])[0] ?? ''));
@@ -55,9 +56,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
     };
   }, [previewUrl]);
 
-  const onFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
+  const handleFile = async (f: File) => {
     const isImage = f.type.startsWith('image/');
     const isPdf = f.type === 'application/pdf';
     if (!isImage && !isPdf) { setError('이미지 또는 PDF 파일만'); return; }
@@ -66,6 +65,31 @@ export default function RecordForm({ project, currentUid, currentName, existing,
     setFile(f);
     setPreviewUrl(URL.createObjectURL(f));
     await runOcr(f);
+  };
+
+  const onFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    await handleFile(f);
+  };
+
+  const onDragOver = (e: DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dragActive) setDragActive(true);
+  };
+  const onDragLeave = (e: DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+  const onDrop = async (e: DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    const f = e.dataTransfer?.files?.[0];
+    if (!f) return;
+    await handleFile(f);
   };
 
   const runOcr = async (f: File) => {
@@ -168,9 +192,17 @@ export default function RecordForm({ project, currentUid, currentName, existing,
     <form onSubmit={onSubmit} style={{ display: 'grid', gap: 16 }}>
       {/* 영수증 업로드 섹션 */}
       {!file && !existing?.receiptUrl && (
-        <label style={dropStyle}>
+        <label
+          style={{ ...dropStyle, ...(dragActive ? dropStyleActive : {}) }}
+          onDragOver={onDragOver}
+          onDragEnter={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+        >
           <span style={{ fontSize: 32, marginBottom: 4 }}>📷</span>
-          <strong style={{ fontSize: 14, marginBottom: 2 }}>영수증 촬영 또는 선택 (선택)</strong>
+          <strong style={{ fontSize: 14, marginBottom: 2, color: '#333' }}>
+            {dragActive ? '여기에 놓으세요' : '영수증 촬영·선택·드래그 (선택)'}
+          </strong>
           <span style={{ fontSize: 11, color: '#888' }}>이미지/PDF, 최대 10MB · OCR 자동 입력</span>
           <input type="file" accept="image/*,application/pdf" capture="environment" onChange={onFileChange} style={{ display: 'none' }} />
         </label>
@@ -389,4 +421,10 @@ const dropStyle: React.CSSProperties = {
   cursor: 'pointer',
   color: '#7b9fe8',
   textAlign: 'center',
+  transition: 'background 0.15s, border-color 0.15s',
+};
+
+const dropStyleActive: React.CSSProperties = {
+  background: '#eef4ff',
+  borderColor: '#7b9fe8',
 };

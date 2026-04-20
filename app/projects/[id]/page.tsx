@@ -491,7 +491,13 @@ export default function ProjectDetailPage() {
                             <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                               {canEdit && (
                                 <>
-                                  <Link href={`/projects/${project.id}/records/${r.id}/edit`} style={{ ...miniBtn, marginRight: 4 }}>수정</Link>
+                                  <button
+                                    type="button"
+                                    onClick={() => router.push(`/projects/${project.id}/records/${r.id}/edit`)}
+                                    style={{ ...miniBtn, marginRight: 4, cursor: 'pointer' }}
+                                  >
+                                    수정
+                                  </button>
                                   <button onClick={() => onDeleteRecord(r)} style={{ ...miniBtn, color: '#c33', borderColor: '#f0c8c8' }}>삭제</button>
                                 </>
                               )}
