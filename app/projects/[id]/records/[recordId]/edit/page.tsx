@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/AuthContext';
 import { getProject, getRecord } from '@/lib/firestore';
 import { Project, ExpenseRecord } from '@/lib/types';
-import RecordForm from '../../../_record-form/RecordForm';
+import RecordForm from '../../../components/RecordForm';
 
 export default function EditRecordPage() {
   const { user, loading } = useAuth();

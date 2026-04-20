@@ -35,7 +35,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
   const [error, setError] = useState<string | null>(null);
 
   const [type, setType] = useState<RecordType>(existing?.type ?? '영수증');
-  const [categoryId, setCategoryId] = useState<string>(existing?.categoryId ?? (project.categories[0] ?? ''));
+  const [categoryId, setCategoryId] = useState<string>(existing?.categoryId ?? ((project.categories ?? [])[0] ?? ''));
   const [date, setDate] = useState(
     existing ? existing.date.toDate().toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
   );
@@ -43,7 +43,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
   const [content, setContent] = useState(existing?.content ?? '');
   const [amount, setAmount] = useState(existing ? String(existing.amount) : '');
   const [paymentType, setPaymentType] = useState<PaymentType>(existing?.paymentType ?? '법인카드');
-  const [paymentCardId, setPaymentCardId] = useState<string>(existing?.paymentCardId ?? (project.paymentCards[0]?.id ?? ''));
+  const [paymentCardId, setPaymentCardId] = useState<string>(existing?.paymentCardId ?? ((project.paymentCards ?? [])[0]?.id ?? ''));
   const [payerId, setPayerId] = useState<string>(existing?.payerId ?? currentUid);
   const [userNames, setUserNames] = useState(existing?.userNames ?? '');
   const [memo, setMemo] = useState(existing?.memo ?? '');
@@ -94,7 +94,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (project.categories.length === 0) { setError('카테고리를 먼저 추가하세요 (프로젝트 상세 상단)'); return; }
+    if ((project.categories ?? []).length === 0) { setError('카테고리를 먼저 추가하세요 (프로젝트 상세 상단)'); return; }
     if (!categoryId) { setError('카테고리를 선택하세요'); return; }
     const amt = Number(amount);
     if (!Number.isFinite(amt) || amt <= 0) { setError('금액을 올바르게 입력해주세요'); return; }
@@ -108,8 +108,8 @@ export default function RecordForm({ project, currentUid, currentName, existing,
     setError(null);
     setStage('saving');
 
-    const payerName = project.memberNames[payerId] ?? '';
-    const card = project.paymentCards.find((c) => c.id === paymentCardId);
+    const payerName = (project.memberNames ?? {})[payerId] ?? '';
+    const card = (project.paymentCards ?? []).find((c) => c.id === paymentCardId);
     const paymentCardLabel = paymentType === '법인카드' ? (card?.label ?? '') : '';
 
     try {
@@ -214,12 +214,12 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         </Field>
         <Field label="카테고리 *">
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
-            {project.categories.length === 0 ? (
+            {(project.categories ?? []).length === 0 ? (
               <option value="">(카테고리 없음)</option>
             ) : (
               <>
                 <option value="">선택</option>
-                {project.categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                {(project.categories ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
               </>
             )}
           </select>
@@ -268,12 +268,12 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         </div>
         {paymentType === '법인카드' && (
           <div style={{ marginTop: 8 }}>
-            {project.paymentCards.length === 0 ? (
+            {(project.paymentCards ?? []).length === 0 ? (
               <p style={{ fontSize: 12, color: '#c33', margin: 0 }}>등록된 법인카드가 없습니다. 프로젝트 상세에서 먼저 등록하세요.</p>
             ) : (
               <select value={paymentCardId} onChange={(e) => setPaymentCardId(e.target.value)} style={inputStyle}>
                 <option value="">선택</option>
-                {project.paymentCards.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                {(project.paymentCards ?? []).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             )}
           </div>
@@ -284,7 +284,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         <Field label="결제자 *">
           <select value={payerId} onChange={(e) => setPayerId(e.target.value)} style={inputStyle}>
             {project.memberIds.map((uid) => (
-              <option key={uid} value={uid}>{project.memberNames[uid] ?? uid}</option>
+              <option key={uid} value={uid}>{(project.memberNames ?? {})[uid] ?? uid}</option>
             ))}
           </select>
         </Field>

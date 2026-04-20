@@ -114,7 +114,7 @@ export default function ProjectDetailPage() {
     if (!project || !isOwner) return;
     const name = newCategory.trim();
     if (!name) return;
-    if (project.categories.includes(name)) { alert('이미 있는 카테고리'); return; }
+    if ((project.categories ?? []).includes(name)) { alert('이미 있는 카테고리'); return; }
     await addCategory(project.id, name);
     setNewCategory('');
     await loadProject();
@@ -196,13 +196,13 @@ export default function ProjectDetailPage() {
                     <button type="submit" style={btnPrimary}>+ 추가</button>
                   </form>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {project.categories.map((c) => (
+                    {(project.categories ?? []).map((c) => (
                       <span key={c} style={chip}>
                         {c}
                         <button onClick={() => onRemoveCategory(c)} style={chipClose}>×</button>
                       </span>
                     ))}
-                    {project.categories.length === 0 && <span style={{ fontSize: 12, color: '#888' }}>추가된 카테고리 없음</span>}
+                    {(project.categories ?? []).length === 0 && <span style={{ fontSize: 12, color: '#888' }}>추가된 카테고리 없음</span>}
                   </div>
                 </div>
 
@@ -213,13 +213,13 @@ export default function ProjectDetailPage() {
                     <button type="submit" style={btnPrimary}>+ 등록</button>
                   </form>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {project.paymentCards.map((c) => (
+                    {(project.paymentCards ?? []).map((c) => (
                       <span key={c.id} style={chip}>
                         {c.label}
                         <button onClick={() => onRemoveCard(c.id, c.label)} style={chipClose}>×</button>
                       </span>
                     ))}
-                    {project.paymentCards.length === 0 && <span style={{ fontSize: 12, color: '#888' }}>등록된 카드 없음</span>}
+                    {(project.paymentCards ?? []).length === 0 && <span style={{ fontSize: 12, color: '#888' }}>등록된 카드 없음</span>}
                   </div>
                 </div>
               </section>
@@ -227,7 +227,7 @@ export default function ProjectDetailPage() {
 
             <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
               <TabBtn active={selectedTab === ALL_TAB} onClick={() => setSelectedTab(ALL_TAB)}>전체 ({records.length})</TabBtn>
-              {project.categories.map((c) => {
+              {(project.categories ?? []).map((c) => {
                 const count = records.filter((r) => r.categoryId === c).length;
                 return (
                   <TabBtn key={c} active={selectedTab === c} onClick={() => setSelectedTab(c)}>{c} ({count})</TabBtn>
