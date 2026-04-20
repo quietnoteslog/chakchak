@@ -221,12 +221,14 @@ export async function getInviteTokenByProject(projectId: string, token: string):
 }
 
 // 토큰 사용 → 멤버 등록
+// 비멤버는 project read 권한이 없으므로, project 조회 없이 update만 시도.
+// already-member 여부는 호출자(invite page)가 이미 로그인 후 분기 처리함.
 export async function acceptInviteByToken(
   projectId: string,
   token: string,
   uid: string,
   displayName: string
-): Promise<'ok' | 'already-member' | 'revoked' | 'expired' | 'not-found'> {
+): Promise<'ok' | 'revoked' | 'expired' | 'not-found'> {
   const tokenSnap = await getDoc(doc(db, PROJECTS, projectId, INVITE_TOKENS, token));
   if (!tokenSnap.exists()) return 'not-found';
   const tokenData = tokenSnap.data() as InviteToken;
@@ -234,12 +236,6 @@ export async function acceptInviteByToken(
   if (tokenData.expiresAt.toDate().getTime() < Date.now()) return 'expired';
 
   const projectRef = doc(db, PROJECTS, projectId);
-  const projectSnap = await getDoc(projectRef);
-  if (!projectSnap.exists()) return 'not-found';
-  const project = projectSnap.data() as Project;
-
-  if (project.memberIds.includes(uid)) return 'already-member';
-
   await updateDoc(projectRef, {
     memberIds: arrayUnion(uid),
     [`memberNames.${uid}`]: displayName,

@@ -80,15 +80,16 @@ export default function InviteAcceptPage() {
     setStatus('joining');
     try {
       const result = await acceptInviteByToken(projectId, token, user.uid, name);
-      if (result === 'ok' || result === 'already-member') {
+      if (result === 'ok') {
         setStatus('done');
         setTimeout(() => router.replace(`/projects/${projectId}`), 1200);
       } else if (result === 'revoked') setStatus('revoked');
       else if (result === 'expired') setStatus('expired');
       else setStatus('invalid');
     } catch (e) {
-      console.error(e);
-      setError('참여 실패. 잠시 후 다시 시도해주세요');
+      console.error('accept invite failed', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
       setStatus('inputName');
     }
   };
@@ -98,7 +99,7 @@ export default function InviteAcceptPage() {
       <div style={{ width: 380, padding: 32, background: 'rgba(255,255,255,0.92)', borderRadius: 20, boxShadow: '0 8px 32px rgba(100,120,200,0.2)' }}>
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <span style={{ fontSize: 32 }}>✅</span>
-          <h1 style={{ fontSize: 20, fontWeight: 700, margin: '6px 0 0 0' }}>착착 초대</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 700, margin: '6px 0 0 0', color: '#222' }}>착착 초대</h1>
         </div>
 
         {status === 'checking' && <p style={{ textAlign: 'center', color: '#888' }}>초대 확인 중...</p>}
@@ -160,7 +161,7 @@ export default function InviteAcceptPage() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="예: 김유림"
-              style={{ width: '100%', padding: '10px 12px', fontSize: 14, border: '1px solid #d0d6e2', borderRadius: 8, outline: 'none', marginBottom: 12 }}
+              style={{ width: '100%', padding: '10px 12px', fontSize: 14, color: '#222', background: '#fff', border: '1px solid #d0d6e2', borderRadius: 8, outline: 'none', marginBottom: 12 }}
             />
             {error && <p style={{ color: '#c33', fontSize: 12, margin: 0, marginBottom: 8 }}>{error}</p>}
             <button
