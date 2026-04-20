@@ -141,6 +141,19 @@ export async function setCategories(projectId: string, list: string[]) {
   await updateDoc(doc(db, PROJECTS, projectId), { categories: list });
 }
 
+// 편집 권한 부여/회수
+export async function addEditor(projectId: string, uid: string) {
+  await updateDoc(doc(db, PROJECTS, projectId), {
+    editorIds: arrayUnion(uid),
+  });
+}
+
+export async function removeEditor(projectId: string, uid: string) {
+  await updateDoc(doc(db, PROJECTS, projectId), {
+    editorIds: arrayRemove(uid),
+  });
+}
+
 export async function setCategories2(projectId: string, list: string[]) {
   await updateDoc(doc(db, PROJECTS, projectId), { categories2: list });
 }

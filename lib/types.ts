@@ -30,6 +30,7 @@ export interface Project {
   invitedMembers: InvitedMember[];
   categories: string[];      // 카테고리1
   categories2?: string[];    // 카테고리2 (선택)
+  editorIds?: string[];      // 다른 사람의 내역도 수정/삭제 가능한 uid 목록 (owner가 부여)
   paymentCards: PaymentCard[];
   createdAt: Timestamp;
 }

@@ -11,6 +11,8 @@ import {
   createInviteToken,
   listInviteTokens,
   revokeInviteToken,
+  addEditor,
+  removeEditor,
 } from '@/lib/firestore';
 import { Project, InviteToken } from '@/lib/types';
 
@@ -102,6 +104,18 @@ export default function MembersPage() {
     }
     if (!confirm(`${name}님을 프로젝트에서 제외할까요?`)) return;
     await removeMember(project.id, uid);
+    await refresh();
+  };
+
+  const onToggleEditor = async (uid: string, currentlyEditor: boolean) => {
+    if (!project || !isOwner) return;
+    if (currentlyEditor) {
+      if (!confirm('편집 권한을 회수할까요? 이후 본인이 작성한 내역만 수정·삭제할 수 있습니다.')) return;
+      await removeEditor(project.id, uid);
+    } else {
+      if (!confirm('편집 권한을 부여할까요? 이후 다른 사람이 작성한 내역도 수정·삭제할 수 있습니다.')) return;
+      await addEditor(project.id, uid);
+    }
     await refresh();
   };
 
@@ -205,28 +219,30 @@ export default function MembersPage() {
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}>
                 {project.memberIds.map((uid) => {
                   const isThisOwner = uid === project.ownerId;
+                  const isEditorMember = (project.editorIds ?? []).includes(uid);
                   const displayName = project.memberNames?.[uid] ?? '(이름 없음)';
                   const canEdit = isOwner || uid === user.uid;
                   const isEditing = editingUid === uid;
                   return (
                     <li
                       key={uid}
-                      style={{ padding: 12, background: '#fff', borderRadius: 8, border: '1px solid #e5e9f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
+                      style={{ padding: 12, background: '#fff', borderRadius: 8, border: '1px solid #e5e9f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
                     >
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ flex: 1, minWidth: 120 }}>
                         {isEditing ? (
                           <input
                             value={editingName}
                             onChange={(e) => setEditingName(e.target.value)}
-                            style={{ padding: '6px 10px', fontSize: 14, border: '1px solid #d0d6e2', borderRadius: 6, outline: 'none', width: '100%' }}
+                            style={{ padding: '6px 10px', fontSize: 14, border: '1px solid #d0d6e2', borderRadius: 6, outline: 'none', width: '100%', color: '#222', background: '#fff' }}
                             autoFocus
                           />
                         ) : (
-                          <div style={{ fontSize: 14, fontWeight: 600 }}>{displayName}</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: '#222' }}>{displayName}</div>
                         )}
                       </div>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                         {isThisOwner && <span style={{ fontSize: 10, padding: '2px 8px', background: '#e8efff', color: '#4a6bc4', borderRadius: 10, fontWeight: 600 }}>총괄</span>}
+                        {!isThisOwner && isEditorMember && <span style={{ fontSize: 10, padding: '2px 8px', background: '#e8f5e9', color: '#2e7d32', borderRadius: 10, fontWeight: 600 }}>편집 권한</span>}
                         {isEditing ? (
                           <>
                             <button onClick={saveEdit} style={{ ...miniBtn(), color: '#4a6bc4', borderColor: '#c5d3ef' }}>저장</button>
@@ -235,6 +251,14 @@ export default function MembersPage() {
                         ) : (
                           <>
                             {canEdit && <button onClick={() => startEdit(uid, displayName)} style={miniBtn()}>이름 수정</button>}
+                            {isOwner && !isThisOwner && (
+                              <button
+                                onClick={() => onToggleEditor(uid, isEditorMember)}
+                                style={{ ...miniBtn(), color: isEditorMember ? '#c33' : '#2e7d32', borderColor: isEditorMember ? '#f0c8c8' : '#c6e7c9' }}
+                              >
+                                {isEditorMember ? '권한 회수' : '편집 권한'}
+                              </button>
+                            )}
                             {isOwner && !isThisOwner && (
                               <button onClick={() => onRemoveMember(uid, displayName)} style={{ ...miniBtn(), color: '#c33', borderColor: '#f0c8c8' }}>제거</button>
                             )}

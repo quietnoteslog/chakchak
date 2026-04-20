@@ -41,6 +41,7 @@ service cloud.firestore {
                         && request.resource.data.startDate == resource.data.startDate
                         && request.resource.data.endDate == resource.data.endDate
                         && request.resource.data.createdAt == resource.data.createdAt
+                        && request.resource.data.get('editorIds', []) == resource.data.get('editorIds', [])
                       )
                       // 비멤버가 초대 토큰 사용 시 자기 uid + 자기 이름만 추가
                       || (
@@ -51,6 +52,7 @@ service cloud.firestore {
                         && request.resource.data.startDate == resource.data.startDate
                         && request.resource.data.endDate == resource.data.endDate
                         && request.resource.data.createdAt == resource.data.createdAt
+                        && request.resource.data.get('editorIds', []) == resource.data.get('editorIds', [])
                       )
                     );
 
@@ -67,11 +69,15 @@ service cloud.firestore {
           return request.auth != null
                  && request.auth.uid == get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId;
         }
+        function isAllEditor() {
+          return request.auth != null
+                 && get(/databases/$(database)/documents/projects/$(projectId)).data.get('editorIds', []).hasAny([request.auth.uid]);
+        }
 
         allow read: if isMember();
         allow create: if isMember() && request.auth.uid == request.resource.data.createdBy;
-        allow update: if isOwner() || (isMember() && request.auth.uid == resource.data.createdBy);
-        allow delete: if isOwner() || (isMember() && request.auth.uid == resource.data.createdBy);
+        allow update: if isOwner() || isAllEditor() || (isMember() && request.auth.uid == resource.data.createdBy);
+        allow delete: if isOwner() || isAllEditor() || (isMember() && request.auth.uid == resource.data.createdBy);
       }
 
       // projects/{projectId}/inviteTokens/{token}

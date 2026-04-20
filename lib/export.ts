@@ -170,8 +170,8 @@ export async function exportReceiptsAsZip(
       const ext = extFromBlob(blob, 'jpg');
       const no = String(i + 1).padStart(3, '0');
       const dateStr = formatDateShort(r.date.toDate());
-      const merchant = sanitize(r.merchant) || 'unknown';
-      const filename = `${safeProject}_${no}_${merchant}_${dateStr}.${ext}`;
+      const label = sanitize(r.content || r.merchant) || 'unknown';
+      const filename = `${safeProject}_${no}_${label}_${dateStr}.${ext}`;
       zip.file(filename, blob);
       added++;
     } catch (e) {
@@ -415,7 +415,7 @@ export async function downloadSingleReceipt(record: ExpenseRecord, projectName: 
   const ext = extFromBlob(blob, 'jpg');
   const no = String(index + 1).padStart(3, '0');
   const dateStr = formatDateShort(record.date.toDate());
-  const merchant = sanitize(record.merchant) || 'unknown';
+  const label = sanitize(record.content || record.merchant) || 'unknown';
   const safeProject = sanitize(projectName);
-  triggerDownload(blob, `${safeProject}_${no}_${merchant}_${dateStr}.${ext}`);
+  triggerDownload(blob, `${safeProject}_${no}_${label}_${dateStr}.${ext}`);
 }

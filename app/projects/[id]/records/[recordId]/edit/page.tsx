@@ -32,7 +32,8 @@ export default function EditRecordPage() {
       setProject(p);
       const r = await getRecord(projectId, recordId);
       if (!r) { setError('내역을 찾을 수 없습니다'); return; }
-      const canEdit = r.createdBy === user.uid || p.ownerId === user.uid;
+      const isEditor = (p.editorIds ?? []).includes(user.uid);
+      const canEdit = r.createdBy === user.uid || p.ownerId === user.uid || isEditor;
       if (!canEdit) { setError('수정 권한이 없습니다'); return; }
       setRecord(r);
     })();

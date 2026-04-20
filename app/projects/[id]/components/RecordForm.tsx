@@ -47,6 +47,12 @@ export default function RecordForm({ project, currentUid, currentName, existing,
   const [paymentType, setPaymentType] = useState<PaymentType>(existing?.paymentType ?? '법인카드');
   const [paymentCardId, setPaymentCardId] = useState<string>(existing?.paymentCardId ?? ((project.paymentCards ?? [])[0]?.id ?? ''));
   const [payerId, setPayerId] = useState<string>(existing?.payerId ?? currentUid);
+  const [payerCustomName, setPayerCustomName] = useState<string>(
+    existing && !existing.payerId ? (existing.payerName ?? '') : ''
+  );
+  const [payerMode, setPayerMode] = useState<'member' | 'custom'>(
+    existing && !existing.payerId ? 'custom' : 'member'
+  );
   const [userNames, setUserNames] = useState(existing?.userNames ?? '');
   const [memo, setMemo] = useState(existing?.memo ?? '');
 
@@ -128,12 +134,16 @@ export default function RecordForm({ project, currentUid, currentName, existing,
       setError('법인카드를 선택하거나 먼저 등록해주세요');
       return;
     }
-    if (!payerId) { setError('결제자를 선택해주세요'); return; }
+    if (payerMode === 'member' && !payerId) { setError('결제자를 선택해주세요'); return; }
+    if (payerMode === 'custom' && !payerCustomName.trim()) { setError('결제자 이름을 입력해주세요'); return; }
 
     setError(null);
     setStage('saving');
 
-    const payerName = (project.memberNames ?? {})[payerId] ?? '';
+    const payerName = payerMode === 'custom'
+      ? payerCustomName.trim()
+      : ((project.memberNames ?? {})[payerId] ?? '');
+    const finalPayerId = payerMode === 'custom' ? '' : payerId;
     const card = (project.paymentCards ?? []).find((c) => c.id === paymentCardId);
     const paymentCardLabel = paymentType === '법인카드' ? (card?.label ?? '') : '';
 
@@ -166,7 +176,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         paymentType,
         paymentCardId: paymentType === '법인카드' ? paymentCardId : '',
         paymentCardLabel,
-        payerId,
+        payerId: finalPayerId,
         payerName,
         userNames: userNames.trim(),
         memo: memo.trim(),
@@ -323,11 +333,30 @@ export default function RecordForm({ project, currentUid, currentName, existing,
 
       <div style={row2}>
         <Field label="결제자 *">
-          <select value={payerId} onChange={(e) => setPayerId(e.target.value)} style={inputStyle}>
-            {project.memberIds.map((uid) => (
-              <option key={uid} value={uid}>{(project.memberNames ?? {})[uid] ?? uid}</option>
-            ))}
-          </select>
+          <div style={{ display: 'grid', gap: 6 }}>
+            <select
+              value={payerMode === 'custom' ? '__custom__' : payerId}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === '__custom__') setPayerMode('custom');
+                else { setPayerMode('member'); setPayerId(v); }
+              }}
+              style={inputStyle}
+            >
+              {project.memberIds.map((uid) => (
+                <option key={uid} value={uid}>{(project.memberNames ?? {})[uid] ?? uid}</option>
+              ))}
+              <option value="__custom__">직접 입력 (멤버 외)</option>
+            </select>
+            {payerMode === 'custom' && (
+              <input
+                value={payerCustomName}
+                onChange={(e) => setPayerCustomName(e.target.value)}
+                placeholder="결제자 이름 직접 입력"
+                style={inputStyle}
+              />
+            )}
+          </div>
         </Field>
         <Field label="이용자 (선택)">
           <input value={userNames} onChange={(e) => setUserNames(e.target.value)} style={inputStyle} placeholder="예) 신유림 외 4명" />

@@ -459,7 +459,8 @@ export default function ProjectDetailPage() {
                     </thead>
                     <tbody>
                       {visibleRecords.map((r, i) => {
-                        const canEdit = r.createdBy === user.uid || isOwner;
+                        const isEditor = (project.editorIds ?? []).includes(user.uid);
+                        const canEdit = r.createdBy === user.uid || isOwner || isEditor;
                         return (
                           <tr key={r.id} style={{ borderTop: '1px solid #eef1f7' }}>
                             <td style={{ ...tdStyle, color: '#888', textAlign: 'center' }}>{i + 1}</td>
