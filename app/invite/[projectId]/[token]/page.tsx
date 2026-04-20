@@ -22,8 +22,16 @@ export default function InviteAcceptPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (loading) return; // 인증 상태 확정까지 대기
+    if (!projectId || !token) return;
+
+    // 미로그인: 토큰 조회 시도하지 않고 로그인 유도
+    if (!user) {
+      setStatus('needLogin');
+      return;
+    }
+
     (async () => {
-      if (!projectId || !token) return;
       try {
         const t = await getInviteTokenByProject(projectId, token);
         if (!t) {
@@ -39,29 +47,21 @@ export default function InviteAcceptPage() {
           setStatus('expired');
           return;
         }
-        // 프로젝트 정보 가져오기 (미로그인 상태면 rules 거부 -- 대신 간단 fallback)
-        if (user) {
-          const p = await getProject(projectId);
-          if (p) setProject(p);
-          if (p && p.memberIds.includes(user.uid)) {
-            setStatus('alreadyMember');
-            return;
-          }
-        }
-        if (!loading && !user) {
-          setStatus('needLogin');
+        const p = await getProject(projectId);
+        if (p) setProject(p);
+        if (p && p.memberIds.includes(user.uid)) {
+          setStatus('alreadyMember');
+          setTimeout(() => router.replace(`/projects/${projectId}`), 800);
           return;
         }
-        if (user) {
-          setDisplayName(user.displayName ?? user.email?.split('@')[0] ?? '');
-          setStatus('inputName');
-        }
+        setDisplayName(user.displayName ?? user.email?.split('@')[0] ?? '');
+        setStatus('inputName');
       } catch (e) {
         console.error(e);
         setStatus('invalid');
       }
     })();
-  }, [projectId, token, user, loading]);
+  }, [projectId, token, user, loading, router]);
 
   const onAccept = async () => {
     if (!user || !projectId || !token) return;
