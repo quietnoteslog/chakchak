@@ -136,6 +136,15 @@ export async function removeCategory2(projectId: string, name: string) {
   });
 }
 
+// 순서 덮어쓰기
+export async function setCategories(projectId: string, list: string[]) {
+  await updateDoc(doc(db, PROJECTS, projectId), { categories: list });
+}
+
+export async function setCategories2(projectId: string, list: string[]) {
+  await updateDoc(doc(db, PROJECTS, projectId), { categories2: list });
+}
+
 // --- payment cards ---
 
 export async function addPaymentCard(projectId: string, card: PaymentCard) {

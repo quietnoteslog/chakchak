@@ -188,29 +188,135 @@ export async function exportReceiptsAsZip(
   triggerDownload(zipBlob, `${safeProject}_영수증_${formatDateShort(new Date())}.zip`);
 }
 
-export function exportRecordsToPdf(project: Project, records: ExpenseRecord[], filterSummary: string = '') {
+interface PdfOptions {
+  filterSummary?: string;
+  columns?: Record<string, boolean>;
+  includeReceipts?: boolean;
+}
+
+const DEFAULT_PDF_COLS: Record<string, boolean> = {
+  no: true, date: true, type: true, category1: true, category2: true,
+  merchant: true, content: true, amount: true,
+  paymentType: true, payer: false, userNames: false, memo: false,
+};
+
+const COL_DEFS: { key: string; label: string; width: string; align?: string }[] = [
+  { key: 'no', label: 'No', width: '3%', align: 'center' },
+  { key: 'date', label: '일자', width: '7%' },
+  { key: 'type', label: '구분', width: '6%' },
+  { key: 'category1', label: '카테고리1', width: '8%' },
+  { key: 'category2', label: '카테고리2', width: '8%' },
+  { key: 'merchant', label: '구매처', width: '13%' },
+  { key: 'content', label: '내용', width: '11%' },
+  { key: 'amount', label: '금액', width: '9%', align: 'right' },
+  { key: 'paymentType', label: '결제수단', width: '10%' },
+  { key: 'payer', label: '결제자', width: '8%' },
+  { key: 'userNames', label: '이용자', width: '9%' },
+  { key: 'memo', label: '메모', width: '13%' },
+];
+
+function cellValue(r: ExpenseRecord, key: string, index: number): string {
+  switch (key) {
+    case 'no': return String(index + 1);
+    case 'date': return formatFullDate(r.date.toDate());
+    case 'type': return escapeHtml(r.type || '');
+    case 'category1': return escapeHtml(r.categoryId || '-');
+    case 'category2': return escapeHtml(r.categoryId2 || '-');
+    case 'merchant': return `<span style="font-weight:600">${escapeHtml(r.merchant)}</span>`;
+    case 'content': return escapeHtml(r.content || '-');
+    case 'amount': return (r.amount ?? 0).toLocaleString('ko-KR');
+    case 'paymentType': return `${escapeHtml(r.paymentType || '')}${r.paymentCardLabel ? `<br><span style="font-size:9px;color:#888">${escapeHtml(r.paymentCardLabel)}</span>` : ''}`;
+    case 'payer': return escapeHtml(r.payerName || r.createdByName || '-');
+    case 'userNames': return escapeHtml(r.userNames || '-');
+    case 'memo': return escapeHtml(r.memo || '-');
+    default: return '';
+  }
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('read failed'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+export async function exportRecordsToPdf(
+  project: Project,
+  records: ExpenseRecord[],
+  options: PdfOptions = {}
+) {
+  const { filterSummary = '', columns = DEFAULT_PDF_COLS, includeReceipts = true } = options;
   const total = records.reduce((s, r) => s + (r.amount ?? 0), 0);
   const projectName = escapeHtml(project.name);
   const periodStart = formatFullDate(project.startDate.toDate());
   const periodEnd = project.endDate ? formatFullDate(project.endDate.toDate()) : '';
   const generatedAt = formatFullDate(new Date());
 
-  const rowsHtml = records.map((r, i) => `
-    <tr>
-      <td style="text-align:center;color:#888">${i + 1}</td>
-      <td style="white-space:nowrap">${formatFullDate(r.date.toDate())}</td>
-      <td>${escapeHtml(r.type || '')}</td>
-      <td>${escapeHtml(r.categoryId || '-')}</td>
-      <td>${escapeHtml(r.categoryId2 || '-')}</td>
-      <td style="font-weight:600">${escapeHtml(r.merchant)}</td>
-      <td>${escapeHtml(r.content || '-')}</td>
-      <td style="text-align:right;font-variant-numeric:tabular-nums">${(r.amount ?? 0).toLocaleString('ko-KR')}</td>
-      <td>${escapeHtml(r.paymentType || '')}${r.paymentCardLabel ? `<br><span style="font-size:9px;color:#888">${escapeHtml(r.paymentCardLabel)}</span>` : ''}</td>
-      <td>${escapeHtml(r.payerName || r.createdByName || '-')}</td>
-      <td>${escapeHtml(r.userNames || '-')}</td>
-      <td>${escapeHtml(r.memo || '-')}</td>
-    </tr>
-  `).join('');
+  const activeCols = COL_DEFS.filter((c) => columns[c.key]);
+  const amountColIndex = activeCols.findIndex((c) => c.key === 'amount');
+
+  const headRow = `<tr>${activeCols.map((c) => `<th style="width:${c.width}${c.align === 'right' ? ';text-align:right' : c.align === 'center' ? ';text-align:center' : ''}">${c.label}</th>`).join('')}</tr>`;
+
+  const bodyRows = records.map((r, i) => {
+    const tds = activeCols.map((c) => {
+      const align = c.align === 'right' ? 'text-align:right;font-variant-numeric:tabular-nums' : c.align === 'center' ? 'text-align:center;color:#888' : '';
+      return `<td style="${align}">${cellValue(r, c.key, i)}</td>`;
+    }).join('');
+    return `<tr>${tds}</tr>`;
+  }).join('');
+
+  let footRow = '';
+  if (amountColIndex >= 0) {
+    const before = amountColIndex; // 앞 셀 수
+    const after = activeCols.length - amountColIndex - 1;
+    const labelCell = before > 0 ? `<td colspan="${before}" style="text-align:right">합계</td>` : '';
+    const amountCell = `<td style="text-align:right;font-variant-numeric:tabular-nums">${total.toLocaleString('ko-KR')}</td>`;
+    const afterCell = after > 0 ? `<td colspan="${after}"></td>` : '';
+    footRow = `<tr>${labelCell}${amountCell}${afterCell}</tr>`;
+  }
+
+  // 영수증 이미지 → data URL 수집
+  let receiptPagesHtml = '';
+  if (includeReceipts) {
+    const items: { index: number; record: ExpenseRecord; dataUrl: string }[] = [];
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i];
+      if (!r.receiptPath && !r.receiptUrl) continue;
+      try {
+        const blob = await fetchReceiptBlob(r.receiptPath, r.receiptUrl);
+        if (blob.type === 'application/pdf') continue; // PDF 영수증은 스킵
+        const dataUrl = await blobToDataUrl(blob);
+        items.push({ index: i, record: r, dataUrl });
+      } catch (e) {
+        console.warn('receipt fetch failed', r.id, e);
+      }
+    }
+    receiptPagesHtml = items.map(({ index, record, dataUrl }) => {
+      const no = String(index + 1).padStart(3, '0');
+      return `
+  <section class="receipt-page">
+    <div class="rp-header">
+      <div class="rp-no">#${no}</div>
+      <div class="rp-meta">
+        <div class="rp-merchant">${escapeHtml(record.merchant)}</div>
+        <div class="rp-sub">
+          <span>${formatFullDate(record.date.toDate())}</span>
+          <span>${escapeHtml(record.type || '')}</span>
+          ${record.categoryId ? `<span>${escapeHtml(record.categoryId)}</span>` : ''}
+          ${record.categoryId2 ? `<span>${escapeHtml(record.categoryId2)}</span>` : ''}
+        </div>
+        ${record.content ? `<div class="rp-content">${escapeHtml(record.content)}</div>` : ''}
+      </div>
+      <div class="rp-amount">${(record.amount ?? 0).toLocaleString('ko-KR')}원</div>
+    </div>
+    <div class="rp-image-wrap">
+      <img src="${dataUrl}" alt="receipt ${no}" />
+    </div>
+  </section>`;
+    }).join('');
+  }
 
   const html = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8">
@@ -230,7 +336,20 @@ export function exportRecordsToPdf(project: Project, records: ExpenseRecord[], f
   tr:nth-child(even) td { background: #F7F9FD; }
   tfoot td { font-weight: 700; background: #E8EFFF; border-top: 2px solid #7B9FE8; padding: 6px 5px; }
   .footer { margin-top: 12px; font-size: 9px; color: #888; text-align: right; }
-  @media print { body { padding: 0; } }
+
+  /* 영수증 페이지 */
+  .receipt-page { page-break-before: always; padding: 10mm 0; display: flex; flex-direction: column; min-height: calc(100vh - 40px); }
+  .rp-header { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: start; padding: 12px 14px; border: 2px solid #7B9FE8; border-radius: 8px; background: #F7F9FD; margin-bottom: 10px; }
+  .rp-no { font-size: 22px; font-weight: 800; color: #7B9FE8; line-height: 1; }
+  .rp-merchant { font-size: 16px; font-weight: 700; color: #222; margin-bottom: 4px; }
+  .rp-sub { font-size: 11px; color: #555; display: flex; gap: 8px; flex-wrap: wrap; }
+  .rp-sub span { padding: 2px 8px; background: #fff; border: 1px solid #D0D6E2; border-radius: 10px; }
+  .rp-content { font-size: 12px; color: #444; margin-top: 6px; }
+  .rp-amount { font-size: 18px; font-weight: 800; color: #222; align-self: center; white-space: nowrap; }
+  .rp-image-wrap { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .rp-image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #E5E9F2; }
+
+  @media print { body { padding: 0; } .receipt-page { page-break-before: always; } }
 </style></head><body>
   <h1>${projectName}</h1>
   <div class="meta">프로젝트 기간: ${periodStart}${periodEnd ? ' ~ ' + periodEnd : ''} / 발행일: ${generatedAt}</div>
@@ -239,40 +358,20 @@ export function exportRecordsToPdf(project: Project, records: ExpenseRecord[], f
     <div>총 ${records.length}건</div>
     <div class="total">합계 ${total.toLocaleString('ko-KR')}원</div>
   </div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:3%">No</th>
-        <th style="width:7%">일자</th>
-        <th style="width:6%">구분</th>
-        <th style="width:8%">카테고리1</th>
-        <th style="width:8%">카테고리2</th>
-        <th style="width:12%">구매처</th>
-        <th style="width:10%">내용</th>
-        <th style="width:8%">금액</th>
-        <th style="width:9%">결제수단</th>
-        <th style="width:7%">결제자</th>
-        <th style="width:9%">이용자</th>
-        <th style="width:13%">메모</th>
-      </tr>
-    </thead>
-    <tbody>${rowsHtml}</tbody>
-    <tfoot>
-      <tr>
-        <td colspan="7" style="text-align:right">합계</td>
-        <td style="text-align:right;font-variant-numeric:tabular-nums">${total.toLocaleString('ko-KR')}</td>
-        <td colspan="4"></td>
-      </tr>
-    </tfoot>
-  </table>
+  ${activeCols.length > 0 ? `<table>
+    <thead>${headRow}</thead>
+    <tbody>${bodyRows}</tbody>
+    ${footRow ? `<tfoot>${footRow}</tfoot>` : ''}
+  </table>` : ''}
   <div class="footer">착착 - ${projectName}</div>
+  ${receiptPagesHtml}
   <script>
-    window.addEventListener('load', () => { setTimeout(() => window.print(), 300); });
+    window.addEventListener('load', () => { setTimeout(() => window.print(), 500); });
   </script>
 </body></html>`;
 
   const w = window.open('', '_blank');
-  if (!w) { alert('팝업 차단을 해제하고 다시 시도해주세요'); return; }
+  if (!w) throw new Error('팝업 차단을 해제하고 다시 시도해주세요');
   w.document.open();
   w.document.write(html);
   w.document.close();

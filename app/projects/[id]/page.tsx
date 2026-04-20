@@ -13,6 +13,8 @@ import {
   removeCategory,
   addCategory2,
   removeCategory2,
+  setCategories,
+  setCategories2,
   addPaymentCard,
   removePaymentCard,
 } from '@/lib/firestore';
@@ -45,6 +47,14 @@ export default function ProjectDetailPage() {
   const [filterPaymentType, setFilterPaymentType] = useState<string>(''); // 결제수단
   const [filterQuery, setFilterQuery] = useState<string>('');         // 검색어
   const [showFilter, setShowFilter] = useState(false);
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [pdfColumns, setPdfColumns] = useState<Record<string, boolean>>({
+    no: true, date: true, type: true, category1: true, category2: true,
+    merchant: true, content: true, amount: true,
+    paymentType: true, payer: false, userNames: false, memo: false,
+  });
+  const [pdfIncludeReceipts, setPdfIncludeReceipts] = useState(true);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -122,7 +132,7 @@ export default function ProjectDetailPage() {
     try { exportRecordsToExcel(project, visibleRecords); } catch (e) { console.error(e); alert('엑셀 생성 실패'); }
   };
 
-  const onExportPdf = () => {
+  const onExportPdf = async () => {
     if (!project || visibleRecords.length === 0) return;
     const filterSummary = buildFilterSummary({
       tab: selectedTab === ALL_TAB ? '' : selectedTab,
@@ -132,8 +142,20 @@ export default function ProjectDetailPage() {
       paymentType: filterPaymentType,
       query: q,
     });
-    try { exportRecordsToPdf(project, visibleRecords, filterSummary); }
-    catch (e) { console.error(e); alert('PDF 생성 실패'); }
+    setPdfGenerating(true);
+    try {
+      await exportRecordsToPdf(project, visibleRecords, {
+        filterSummary,
+        columns: pdfColumns,
+        includeReceipts: pdfIncludeReceipts,
+      });
+      setPdfModalOpen(false);
+    } catch (e) {
+      console.error(e);
+      alert(e instanceof Error ? e.message : 'PDF 생성 실패');
+    } finally {
+      setPdfGenerating(false);
+    }
   };
 
   const onExportZip = async () => {
@@ -168,6 +190,18 @@ export default function ProjectDetailPage() {
     if (!confirm(`"${name}" 카테고리1을 삭제할까요?`)) return;
     await removeCategory(project.id, name);
     if (selectedTab === name) setSelectedTab(ALL_TAB);
+    await loadProject();
+  };
+
+  const onMoveCategory = async (which: 1 | 2, index: number, delta: -1 | 1) => {
+    if (!project || !isOwner) return;
+    const source = which === 1 ? (project.categories ?? []) : (project.categories2 ?? []);
+    const list = [...source];
+    const to = index + delta;
+    if (to < 0 || to >= list.length) return;
+    [list[index], list[to]] = [list[to], list[index]];
+    if (which === 1) await setCategories(project.id, list);
+    else await setCategories2(project.id, list);
     await loadProject();
   };
 
@@ -260,8 +294,10 @@ export default function ProjectDetailPage() {
                     <button type="submit" style={btnPrimary}>+ 추가</button>
                   </form>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {(project.categories ?? []).map((c) => (
+                    {(project.categories ?? []).map((c, i, arr) => (
                       <span key={c} style={chip}>
+                        <button onClick={() => onMoveCategory(1, i, -1)} disabled={i === 0} style={{ ...chipArrow, opacity: i === 0 ? 0.3 : 1 }} title="위로">↑</button>
+                        <button onClick={() => onMoveCategory(1, i, 1)} disabled={i === arr.length - 1} style={{ ...chipArrow, opacity: i === arr.length - 1 ? 0.3 : 1 }} title="아래로">↓</button>
                         {c}
                         <button onClick={() => onRemoveCategory(c)} style={chipClose}>×</button>
                       </span>
@@ -277,8 +313,10 @@ export default function ProjectDetailPage() {
                     <button type="submit" style={btnPrimary}>+ 추가</button>
                   </form>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {(project.categories2 ?? []).map((c) => (
+                    {(project.categories2 ?? []).map((c, i, arr) => (
                       <span key={c} style={chip}>
+                        <button onClick={() => onMoveCategory(2, i, -1)} disabled={i === 0} style={{ ...chipArrow, opacity: i === 0 ? 0.3 : 1 }} title="위로">↑</button>
+                        <button onClick={() => onMoveCategory(2, i, 1)} disabled={i === arr.length - 1} style={{ ...chipArrow, opacity: i === arr.length - 1 ? 0.3 : 1 }} title="아래로">↓</button>
                         {c}
                         <button onClick={() => onRemoveCategory2(c)} style={chipClose}>×</button>
                       </span>
@@ -383,7 +421,7 @@ export default function ProjectDetailPage() {
                 {visibleRecords.length > 0 && (
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={onExportExcel} style={btnSmall}>📊 엑셀</button>
-                    <button onClick={onExportPdf} style={btnSmall}>📄 PDF</button>
+                    <button onClick={() => setPdfModalOpen(true)} style={btnSmall}>📄 PDF</button>
                     <button onClick={onExportZip} disabled={!!zipProgress} style={{ ...btnSmall, color: zipProgress ? '#999' : '#333' }}>
                       {zipProgress ? `Zip ${zipProgress.done}/${zipProgress.total}` : '📦 Zip'}
                     </button>
@@ -465,9 +503,66 @@ export default function ProjectDetailPage() {
           </>
         ) : null}
       </main>
+
+      {pdfModalOpen && project && (
+        <div style={modalOverlay} onClick={() => !pdfGenerating && setPdfModalOpen(false)}>
+          <div style={modalBox} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, marginBottom: 4 }}>PDF 다운로드</h3>
+            <p style={{ fontSize: 12, color: '#888', margin: 0, marginBottom: 14 }}>포함할 항목을 선택하세요</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+              {PDF_COLUMN_DEFS.map(({ key, label, note }) => (
+                <label key={key} style={colToggleRow}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{label}</div>
+                    {note && <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{note}</div>}
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={!!pdfColumns[key]}
+                    onChange={(e) => setPdfColumns((prev) => ({ ...prev, [key]: e.target.checked }))}
+                  />
+                </label>
+              ))}
+            </div>
+
+            <label style={{ ...colToggleRow, background: '#eef4ff', borderColor: '#c5d5f4' }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#4a6bc4' }}>영수증 이미지 포함</div>
+                <div style={{ fontSize: 11, color: '#4a6bc4', marginTop: 2 }}>목록 뒤에 번호 순서로 영수증을 첨부합니다</div>
+              </div>
+              <input type="checkbox" checked={pdfIncludeReceipts} onChange={(e) => setPdfIncludeReceipts(e.target.checked)} />
+            </label>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button onClick={onExportPdf} disabled={pdfGenerating} style={{ flex: 1, ...btnPrimary, cursor: pdfGenerating ? 'default' : 'pointer', opacity: pdfGenerating ? 0.6 : 1 }}>
+                {pdfGenerating ? 'PDF 생성 중...' : 'PDF 생성'}
+              </button>
+              <button onClick={() => setPdfModalOpen(false)} disabled={pdfGenerating} style={btnSecondary}>
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+const PDF_COLUMN_DEFS: { key: string; label: string; note?: string }[] = [
+  { key: 'no', label: '순번' },
+  { key: 'date', label: '일자' },
+  { key: 'type', label: '구분' },
+  { key: 'category1', label: '카테고리1' },
+  { key: 'category2', label: '카테고리2' },
+  { key: 'merchant', label: '구매처' },
+  { key: 'content', label: '내용' },
+  { key: 'amount', label: '금액' },
+  { key: 'paymentType', label: '결제수단' },
+  { key: 'payer', label: '결제자', note: '내부 확인용 - 클라이언트 제출 시 제외 권장' },
+  { key: 'userNames', label: '이용자', note: '내부 확인용 - 클라이언트 제출 시 제외 권장' },
+  { key: 'memo', label: '메모' },
+];
 
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -507,6 +602,7 @@ const settingsTitle: React.CSSProperties = { fontSize: 13, fontWeight: 700, marg
 const inlineInput: React.CSSProperties = { padding: '8px 10px', fontSize: 13, border: '1px solid #d0d6e2', borderRadius: 6, outline: 'none' };
 const chip: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#eef4ff', color: '#4a6bc4', borderRadius: 14, fontSize: 12, fontWeight: 600 };
 const chipClose: React.CSSProperties = { background: 'transparent', border: 'none', color: '#4a6bc4', cursor: 'pointer', fontSize: 14, padding: 0, lineHeight: 1 };
+const chipArrow: React.CSSProperties = { background: 'transparent', border: 'none', color: '#4a6bc4', cursor: 'pointer', fontSize: 11, padding: '0 2px', lineHeight: 1 };
 const emptyBox: React.CSSProperties = { padding: 24, background: '#fff', border: '1px dashed #d0d6e2', borderRadius: 12, textAlign: 'center', color: '#888', fontSize: 13 };
 const thStyle: React.CSSProperties = { padding: '10px 10px', fontSize: 11, fontWeight: 700, textAlign: 'left', whiteSpace: 'nowrap' };
 const tdStyle: React.CSSProperties = { padding: '10px 10px', fontSize: 12, color: '#333' };
@@ -514,6 +610,9 @@ const tag: React.CSSProperties = { fontSize: 10, padding: '2px 6px', background:
 const linkBtn: React.CSSProperties = { fontSize: 11, background: 'none', border: 'none', color: '#7b9fe8', cursor: 'pointer', padding: 0, textDecoration: 'none' };
 const miniBtn: React.CSSProperties = { padding: '4px 8px', fontSize: 11, background: '#fff', border: '1px solid #d0d6e2', borderRadius: 4, color: '#555', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' };
 const filterLabel: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: '#666' };
+const modalOverlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000 };
+const modalBox: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: 20, maxWidth: 420, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' };
+const colToggleRow: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 12px', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', background: '#fff' };
 
 function buildFilterSummary(f: { tab: string; type: string; category2: string; payer: string; paymentType: string; query: string }): string {
   const parts: string[] = [];
