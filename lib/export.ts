@@ -242,6 +242,34 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
+function renderRecordCard(r: ExpenseRecord, index: number, imgDataUrl: string | null, columns: Record<string, boolean>, activeCols: typeof COL_DEFS): string {
+  const no = String(index + 1).padStart(3, '0');
+  const HEADER_KEYS = new Set(['no', 'merchant', 'amount']);
+  const detailCols = activeCols.filter((c) => !HEADER_KEYS.has(c.key));
+  const showNo = columns.no !== false;
+  const showMerchant = columns.merchant !== false;
+  const showAmount = columns.amount !== false;
+  const detailHtml = detailCols.map((c) => {
+    const v = cellValue(r, c.key, index);
+    return `<div class="rp-detail"><span class="k">${c.label}</span><span class="v">${v}</span></div>`;
+  }).join('');
+  const imageHtml = imgDataUrl
+    ? `<img src="${imgDataUrl}" alt="receipt ${no}" />`
+    : `<div class="rp-no-image">영수증 없음</div>`;
+  return `
+    <article class="rp-card">
+      <div class="rp-top">
+        <div class="rp-topmain">
+          ${showNo ? `<div class="rp-no">#${no}</div>` : ''}
+          ${showMerchant ? `<div class="rp-merchant">${escapeHtml(r.merchant)}</div>` : '<div class="rp-merchant"></div>'}
+          ${showAmount ? `<div class="rp-amount">${(r.amount ?? 0).toLocaleString('ko-KR')}원</div>` : ''}
+        </div>
+        ${detailCols.length > 0 ? `<div class="rp-details">${detailHtml}</div>` : ''}
+      </div>
+      <div class="rp-image-wrap">${imageHtml}</div>
+    </article>`;
+}
+
 export async function exportRecordsToPdf(
   project: Project,
   records: ExpenseRecord[],
@@ -255,116 +283,114 @@ export async function exportRecordsToPdf(
   const generatedAt = formatFullDate(new Date());
 
   const activeCols = COL_DEFS.filter((c) => columns[c.key]);
-  const amountColIndex = activeCols.findIndex((c) => c.key === 'amount');
 
-  const headRow = `<tr>${activeCols.map((c) => `<th style="width:${c.width}${c.align === 'right' ? ';text-align:right' : c.align === 'center' ? ';text-align:center' : ''}">${c.label}</th>`).join('')}</tr>`;
-
-  const bodyRows = records.map((r, i) => {
-    const tds = activeCols.map((c) => {
-      const align = c.align === 'right' ? 'text-align:right;font-variant-numeric:tabular-nums' : c.align === 'center' ? 'text-align:center;color:#888' : '';
-      return `<td style="${align}">${cellValue(r, c.key, i)}</td>`;
-    }).join('');
-    return `<tr>${tds}</tr>`;
-  }).join('');
-
-  let footRow = '';
-  if (amountColIndex >= 0) {
-    const before = amountColIndex; // 앞 셀 수
-    const after = activeCols.length - amountColIndex - 1;
-    const labelCell = before > 0 ? `<td colspan="${before}" style="text-align:right">합계</td>` : '';
-    const amountCell = `<td style="text-align:right;font-variant-numeric:tabular-nums">${total.toLocaleString('ko-KR')}</td>`;
-    const afterCell = after > 0 ? `<td colspan="${after}"></td>` : '';
-    footRow = `<tr>${labelCell}${amountCell}${afterCell}</tr>`;
-  }
-
-  // 영수증 이미지 → data URL 수집
-  let receiptPagesHtml = '';
-  if (includeReceipts) {
-    const items: { index: number; record: ExpenseRecord; dataUrl: string }[] = [];
-    for (let i = 0; i < records.length; i++) {
-      const r = records[i];
-      if (!r.receiptPath && !r.receiptUrl) continue;
-      try {
-        const blob = await fetchReceiptBlob(r.receiptPath, r.receiptUrl);
-        if (blob.type === 'application/pdf') continue; // PDF 영수증은 스킵
-        const dataUrl = await blobToDataUrl(blob);
-        items.push({ index: i, record: r, dataUrl });
-      } catch (e) {
-        console.warn('receipt fetch failed', r.id, e);
-      }
-    }
-    receiptPagesHtml = items.map(({ index, record, dataUrl }) => {
-      const no = String(index + 1).padStart(3, '0');
-      return `
-  <section class="receipt-page">
-    <div class="rp-header">
-      <div class="rp-no">#${no}</div>
-      <div class="rp-meta">
-        <div class="rp-merchant">${escapeHtml(record.merchant)}</div>
-        <div class="rp-sub">
-          <span>${formatFullDate(record.date.toDate())}</span>
-          <span>${escapeHtml(record.type || '')}</span>
-          ${record.categoryId ? `<span>${escapeHtml(record.categoryId)}</span>` : ''}
-          ${record.categoryId2 ? `<span>${escapeHtml(record.categoryId2)}</span>` : ''}
-        </div>
-        ${record.content ? `<div class="rp-content">${escapeHtml(record.content)}</div>` : ''}
-      </div>
-      <div class="rp-amount">${(record.amount ?? 0).toLocaleString('ko-KR')}원</div>
-    </div>
-    <div class="rp-image-wrap">
-      <img src="${dataUrl}" alt="receipt ${no}" />
-    </div>
-  </section>`;
-    }).join('');
-  }
-
-  const html = `<!DOCTYPE html>
-<html lang="ko"><head><meta charset="utf-8">
-<title>${projectName} 경비 내역 ${generatedAt}</title>
-<style>
-  @page { size: A4 landscape; margin: 10mm; }
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: #222; margin: 0; padding: 20px; font-size: 10px; }
-  h1 { font-size: 16px; margin: 0 0 4px; }
-  .meta { color: #666; font-size: 10px; margin-bottom: 4px; }
-  .filter { font-size: 10px; color: #4a6bc4; margin-bottom: 10px; padding: 6px 8px; background: #eef4ff; border-radius: 4px; }
-  .summary { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #ddd; }
-  .summary .total { font-size: 14px; font-weight: 700; }
-  table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
-  th { background: #7B9FE8; color: #fff; padding: 6px 5px; font-weight: 700; text-align: left; border: 1px solid #C8D4EF; }
-  td { padding: 5px 5px; border: 1px solid #eef1f7; vertical-align: top; }
-  tr:nth-child(even) td { background: #F7F9FD; }
-  tfoot td { font-weight: 700; background: #E8EFFF; border-top: 2px solid #7B9FE8; padding: 6px 5px; }
-  .footer { margin-top: 12px; font-size: 9px; color: #888; text-align: right; }
-
-  /* 영수증 페이지 */
-  .receipt-page { page-break-before: always; padding: 10mm 0; display: flex; flex-direction: column; min-height: calc(100vh - 40px); }
-  .rp-header { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: start; padding: 12px 14px; border: 2px solid #7B9FE8; border-radius: 8px; background: #F7F9FD; margin-bottom: 10px; }
-  .rp-no { font-size: 22px; font-weight: 800; color: #7B9FE8; line-height: 1; }
-  .rp-merchant { font-size: 16px; font-weight: 700; color: #222; margin-bottom: 4px; }
-  .rp-sub { font-size: 11px; color: #555; display: flex; gap: 8px; flex-wrap: wrap; }
-  .rp-sub span { padding: 2px 8px; background: #fff; border: 1px solid #D0D6E2; border-radius: 10px; }
-  .rp-content { font-size: 12px; color: #444; margin-top: 6px; }
-  .rp-amount { font-size: 18px; font-weight: 800; color: #222; align-self: center; white-space: nowrap; }
-  .rp-image-wrap { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .rp-image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #E5E9F2; }
-
-  @media print { body { padding: 0; } .receipt-page { page-break-before: always; } }
-</style></head><body>
+  const coverHtml = `
   <h1>${projectName}</h1>
   <div class="meta">프로젝트 기간: ${periodStart}${periodEnd ? ' ~ ' + periodEnd : ''} / 발행일: ${generatedAt}</div>
   ${filterSummary ? `<div class="filter">필터: ${escapeHtml(filterSummary)}</div>` : ''}
   <div class="summary">
     <div>총 ${records.length}건</div>
     <div class="total">합계 ${total.toLocaleString('ko-KR')}원</div>
-  </div>
-  ${activeCols.length > 0 ? `<table>
-    <thead>${headRow}</thead>
-    <tbody>${bodyRows}</tbody>
-    ${footRow ? `<tfoot>${footRow}</tfoot>` : ''}
-  </table>` : ''}
-  <div class="footer">착착 - ${projectName}</div>
-  ${receiptPagesHtml}
+  </div>`;
+
+  let bodyHtml = '';
+  let pageSize: string;
+
+  if (includeReceipts) {
+    pageSize = 'A4 landscape';
+    // 영수증 이미지 수집
+    const imageMap: Record<number, string | null> = {};
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i];
+      if (!r.receiptPath && !r.receiptUrl) { imageMap[i] = null; continue; }
+      try {
+        const blob = await fetchReceiptBlob(r.receiptPath, r.receiptUrl);
+        if (blob.type === 'application/pdf') { imageMap[i] = null; continue; }
+        imageMap[i] = await blobToDataUrl(blob);
+      } catch (e) {
+        console.warn('receipt fetch failed', r.id, e);
+        imageMap[i] = null;
+      }
+    }
+
+    // 2개씩 묶어 한 페이지(landscape 2열)
+    const pages: string[] = [];
+    for (let i = 0; i < records.length; i += 2) {
+      const first = renderRecordCard(records[i], i, imageMap[i], columns, activeCols);
+      const second = records[i + 1]
+        ? renderRecordCard(records[i + 1], i + 1, imageMap[i + 1], columns, activeCols)
+        : '<article class="rp-card rp-empty"></article>';
+      pages.push(`<div class="rp-page">${first}${second}</div>`);
+    }
+    bodyHtml = pages.join('');
+  } else {
+    pageSize = 'A4 landscape';
+    const amountColIndex = activeCols.findIndex((c) => c.key === 'amount');
+    const headRow = `<tr>${activeCols.map((c) => `<th style="width:${c.width}${c.align === 'right' ? ';text-align:right' : c.align === 'center' ? ';text-align:center' : ''}">${c.label}</th>`).join('')}</tr>`;
+    const bodyRows = records.map((r, i) => {
+      const tds = activeCols.map((c) => {
+        const align = c.align === 'right' ? 'text-align:right;font-variant-numeric:tabular-nums' : c.align === 'center' ? 'text-align:center;color:#888' : '';
+        return `<td style="${align}">${cellValue(r, c.key, i)}</td>`;
+      }).join('');
+      return `<tr>${tds}</tr>`;
+    }).join('');
+    let footRow = '';
+    if (amountColIndex >= 0) {
+      const before = amountColIndex;
+      const after = activeCols.length - amountColIndex - 1;
+      const labelCell = before > 0 ? `<td colspan="${before}" style="text-align:right">합계</td>` : '';
+      const amountCell = `<td style="text-align:right;font-variant-numeric:tabular-nums">${total.toLocaleString('ko-KR')}</td>`;
+      const afterCell = after > 0 ? `<td colspan="${after}"></td>` : '';
+      footRow = `<tr>${labelCell}${amountCell}${afterCell}</tr>`;
+    }
+    bodyHtml = activeCols.length > 0 ? `<table>
+      <thead>${headRow}</thead>
+      <tbody>${bodyRows}</tbody>
+      ${footRow ? `<tfoot>${footRow}</tfoot>` : ''}
+    </table>` : '';
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>${projectName} 경비 내역 ${generatedAt}</title>
+<style>
+  @page { size: ${pageSize}; margin: 8mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: #222; margin: 0; padding: 14px; font-size: 10px; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .meta { color: #666; font-size: 10px; margin-bottom: 4px; }
+  .filter { font-size: 10px; color: #4a6bc4; margin-bottom: 10px; padding: 6px 8px; background: #eef4ff; border-radius: 4px; }
+  .summary { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #ddd; }
+  .summary .total { font-size: 14px; font-weight: 700; }
+  .cover-footer { font-size: 9px; color: #888; text-align: right; margin-bottom: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+  th { background: #7B9FE8; color: #fff; padding: 6px 5px; font-weight: 700; text-align: left; border: 1px solid #C8D4EF; }
+  td { padding: 5px 5px; border: 1px solid #eef1f7; vertical-align: top; }
+  tr:nth-child(even) td { background: #F7F9FD; }
+  tfoot td { font-weight: 700; background: #E8EFFF; border-top: 2px solid #7B9FE8; padding: 6px 5px; }
+
+  /* 레코드 페이지 (2열 landscape) */
+  .rp-page { page-break-before: always; display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; height: calc(100vh - 20mm); padding: 2mm 0; }
+  .rp-card { display: flex; flex-direction: column; min-height: 0; }
+  .rp-empty { visibility: hidden; }
+  .rp-top { padding: 8px 10px; border: 2px solid #7B9FE8; border-radius: 6px; background: #F7F9FD; margin-bottom: 6px; flex-shrink: 0; }
+  .rp-topmain { display: flex; align-items: center; gap: 8px; }
+  .rp-no { font-size: 16px; font-weight: 800; color: #7B9FE8; line-height: 1; white-space: nowrap; }
+  .rp-merchant { font-size: 12px; font-weight: 700; color: #222; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rp-amount { font-size: 13px; font-weight: 800; color: #222; white-space: nowrap; }
+  .rp-details { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #D0D6E2; font-size: 9.5px; }
+  .rp-detail { display: flex; gap: 5px; align-items: baseline; overflow: hidden; }
+  .rp-detail .k { color: #888; font-weight: 700; min-width: 40px; flex-shrink: 0; }
+  .rp-detail .v { color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rp-image-wrap { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0; }
+  .rp-image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #E5E9F2; }
+  .rp-no-image { padding: 20px; border: 2px dashed #D0D6E2; border-radius: 6px; color: #888; font-size: 12px; }
+
+  @media print { body { padding: 0; } .rp-page { page-break-before: always; height: calc(100vh - 16mm); } }
+</style></head><body>
+  ${coverHtml}
+  <div class="cover-footer">착착 - ${projectName}</div>
+  ${bodyHtml}
   <script>
     window.addEventListener('load', () => { setTimeout(() => window.print(), 500); });
   </script>

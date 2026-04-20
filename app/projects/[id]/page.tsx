@@ -129,7 +129,9 @@ export default function ProjectDetailPage() {
 
   const onExportExcel = () => {
     if (!project || visibleRecords.length === 0) return;
-    try { exportRecordsToExcel(project, visibleRecords); } catch (e) { console.error(e); alert('엑셀 생성 실패'); }
+    // 화면: 최신순(내림차순), 엑셀: 오래된 순(오름차순)
+    const ordered = [...visibleRecords].reverse();
+    try { exportRecordsToExcel(project, ordered); } catch (e) { console.error(e); alert('엑셀 생성 실패'); }
   };
 
   const onExportPdf = async () => {
@@ -144,7 +146,9 @@ export default function ProjectDetailPage() {
     });
     setPdfGenerating(true);
     try {
-      await exportRecordsToPdf(project, visibleRecords, {
+      // 화면: 최신순(내림차순), PDF: 오래된 순(오름차순)
+      const ordered = [...visibleRecords].reverse();
+      await exportRecordsToPdf(project, ordered, {
         filterSummary,
         columns: pdfColumns,
         includeReceipts: pdfIncludeReceipts,
