@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
+import { upsertUserProfile, listPendingInvitations, acceptInvitation } from './firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -18,7 +19,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        try {
+          await upsertUserProfile(u.uid, u.email ?? '', u.displayName ?? '');
+          if (u.email) {
+            const pending = await listPendingInvitations(u.email);
+            await Promise.all(pending.map((p) => acceptInvitation(p.id, u.uid, u.email!)));
+          }
+        } catch (e) {
+          console.error('profile/invitation sync failed', e);
+        }
+      }
       setUser(u);
       setLoading(false);
     });

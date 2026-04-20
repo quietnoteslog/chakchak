@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // users/{uid}: 본인 프로필만 접근
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.uid == uid
+                    && request.resource.data.email == request.auth.token.email;
+      allow update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // projects/{projectId}
+    match /projects/{projectId} {
+
+      // read: 멤버이거나 초대받은 상태
+      allow read: if request.auth != null
+                  && (
+                    request.auth.uid in resource.data.memberIds
+                    || request.auth.token.email in resource.data.invitedEmails
+                  );
+
+      // create: 로그인 사용자 본인이 owner이고 memberIds에 본인 포함
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.ownerId
+                    && request.auth.uid in request.resource.data.memberIds;
+
+      // update: owner는 전체 수정 가능 / 초대받은 사용자는 자기 uid 추가 + 자기 email 제거만
+      allow update: if request.auth != null
+                    && (
+                      request.auth.uid == resource.data.ownerId
+                      || (
+                        request.auth.token.email in resource.data.invitedEmails
+                        && request.resource.data.ownerId == resource.data.ownerId
+                        && request.resource.data.name == resource.data.name
+                        && request.resource.data.createdAt == resource.data.createdAt
+                        && request.resource.data.startDate == resource.data.startDate
+                        && request.resource.data.endDate == resource.data.endDate
+                        && request.auth.uid in request.resource.data.memberIds
+                        && !(request.auth.token.email in request.resource.data.invitedEmails)
+                      )
+                    );
+
+      // delete: owner만
+      allow delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+    }
+  }
+}
