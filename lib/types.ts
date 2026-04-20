@@ -14,7 +14,9 @@ export interface InvitedMember {
 
 export interface PaymentCard {
   id: string;
-  label: string;
+  label: string;       // 표시용 (자동 조합 "{bank} {number}")
+  bank?: string;       // 카드사 (신규 필드, 구 데이터는 없을 수 있음)
+  number?: string;     // 카드번호 끝 4자리 등
 }
 
 export interface Project {

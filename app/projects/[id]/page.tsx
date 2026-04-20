@@ -33,7 +33,9 @@ export default function ProjectDetailPage() {
   const [selectedTab, setSelectedTab] = useState<string>(ALL_TAB);
   const [showSettings, setShowSettings] = useState(false);
   const [newCategory, setNewCategory] = useState('');
-  const [cardLabel, setCardLabel] = useState('');
+  const [newCategoryParent, setNewCategoryParent] = useState('');
+  const [cardBank, setCardBank] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -112,11 +114,14 @@ export default function ProjectDetailPage() {
   const onAddCategory = async (e: FormEvent) => {
     e.preventDefault();
     if (!project || !isOwner) return;
-    const name = newCategory.trim();
-    if (!name) return;
-    if ((project.categories ?? []).includes(name)) { alert('이미 있는 카테고리'); return; }
-    await addCategory(project.id, name);
+    const child = newCategory.trim();
+    if (!child) return;
+    if (child.includes('>')) { alert('카테고리 이름에 ">" 문자는 사용할 수 없습니다'); return; }
+    const full = newCategoryParent ? `${newCategoryParent} > ${child}` : child;
+    if ((project.categories ?? []).includes(full)) { alert('이미 있는 카테고리'); return; }
+    await addCategory(project.id, full);
     setNewCategory('');
+    setNewCategoryParent('');
     await loadProject();
   };
 
@@ -133,11 +138,14 @@ export default function ProjectDetailPage() {
   const onAddCard = async (e: FormEvent) => {
     e.preventDefault();
     if (!project || !isOwner) return;
-    const label = cardLabel.trim();
-    if (!label) return;
+    const bank = cardBank.trim();
+    const number = cardNumber.trim();
+    if (!bank || !number) { alert('카드사와 카드번호를 모두 입력해주세요'); return; }
+    const label = `${bank} ${number}`;
     const id = `card_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    await addPaymentCard(project.id, { id, label });
-    setCardLabel('');
+    await addPaymentCard(project.id, { id, label, bank, number });
+    setCardBank('');
+    setCardNumber('');
     await loadProject();
   };
 
@@ -191,16 +199,32 @@ export default function ProjectDetailPage() {
               <section style={settingsBox}>
                 <div>
                   <h3 style={settingsTitle}>카테고리</h3>
-                  <form onSubmit={onAddCategory} style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                    <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="예: 현장 운영비" style={{ flex: 1, ...inlineInput }} />
+                  <form onSubmit={onAddCategory} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 6, marginBottom: 8 }}>
+                    <select value={newCategoryParent} onChange={(e) => setNewCategoryParent(e.target.value)} style={{ ...inlineInput }}>
+                      <option value="">(상위 없음 — 최상위)</option>
+                      {getTopLevelCategories(project.categories ?? []).map((top) => (
+                        <option key={top} value={top}>{top}</option>
+                      ))}
+                    </select>
+                    <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder={newCategoryParent ? '예: 식비' : '예: 현장 운영비'} style={{ ...inlineInput }} />
                     <button type="submit" style={btnPrimary}>+ 추가</button>
                   </form>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {(project.categories ?? []).map((c) => (
-                      <span key={c} style={chip}>
-                        {c}
-                        <button onClick={() => onRemoveCategory(c)} style={chipClose}>×</button>
-                      </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {buildCategoryTree(project.categories ?? []).map((node) => (
+                      <div key={node.full}>
+                        <span style={chip}>
+                          {node.display}
+                          <button onClick={() => onRemoveCategory(node.full)} style={chipClose}>×</button>
+                        </span>
+                        {node.children.map((child) => (
+                          <div key={child.full} style={{ marginLeft: 20, marginTop: 4 }}>
+                            <span style={{ ...chip, background: '#f5f7fb', color: '#666' }}>
+                              ↳ {child.name}
+                              <button onClick={() => onRemoveCategory(child.full)} style={{ ...chipClose, color: '#666' }}>×</button>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     ))}
                     {(project.categories ?? []).length === 0 && <span style={{ fontSize: 12, color: '#888' }}>추가된 카테고리 없음</span>}
                   </div>
@@ -208,14 +232,15 @@ export default function ProjectDetailPage() {
 
                 <div style={{ marginTop: 16 }}>
                   <h3 style={settingsTitle}>법인카드</h3>
-                  <form onSubmit={onAddCard} style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                    <input value={cardLabel} onChange={(e) => setCardLabel(e.target.value)} placeholder="예: 신한 법인카드 ****0912" style={{ flex: 1, ...inlineInput }} />
+                  <form onSubmit={onAddCard} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 6, marginBottom: 8 }}>
+                    <input value={cardBank} onChange={(e) => setCardBank(e.target.value)} placeholder="카드사 (예: 신한)" style={{ ...inlineInput }} />
+                    <input value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} placeholder="카드번호 (예: ****0912)" style={{ ...inlineInput }} />
                     <button type="submit" style={btnPrimary}>+ 등록</button>
                   </form>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {(project.paymentCards ?? []).map((c) => (
                       <span key={c.id} style={chip}>
-                        {c.label}
+                        {c.bank && c.number ? `${c.bank} · ${c.number}` : c.label}
                         <button onClick={() => onRemoveCard(c.id, c.label)} style={chipClose}>×</button>
                       </span>
                     ))}
@@ -229,8 +254,12 @@ export default function ProjectDetailPage() {
               <TabBtn active={selectedTab === ALL_TAB} onClick={() => setSelectedTab(ALL_TAB)}>전체 ({records.length})</TabBtn>
               {(project.categories ?? []).map((c) => {
                 const count = records.filter((r) => r.categoryId === c).length;
+                const display = c.includes(' > ') ? c.split(' > ').slice(-1)[0] : c;
+                const isChild = c.includes(' > ');
                 return (
-                  <TabBtn key={c} active={selectedTab === c} onClick={() => setSelectedTab(c)}>{c} ({count})</TabBtn>
+                  <TabBtn key={c} active={selectedTab === c} onClick={() => setSelectedTab(c)}>
+                    {isChild ? `↳ ${display}` : display} ({count})
+                  </TabBtn>
                 );
               })}
             </div>
@@ -360,6 +389,45 @@ function formatDate(ts: { toDate: () => Date }): string {
 }
 function formatMoney(n: number): string {
   return n.toLocaleString('ko-KR');
+}
+
+// 카테고리 유틸 - "부모 > 자식" 플랫 문자열 기반
+function getTopLevelCategories(all: string[]): string[] {
+  return all.filter((c) => !c.includes(' > '));
+}
+
+interface CategoryNode {
+  full: string;
+  name: string;
+  display: string;
+  children: { full: string; name: string }[];
+}
+
+function buildCategoryTree(all: string[]): CategoryNode[] {
+  const tops = getTopLevelCategories(all);
+  const topSet = new Set(tops);
+  const orphans: string[] = [];
+  const childrenByParent: Record<string, { full: string; name: string }[]> = {};
+  for (const c of all) {
+    if (!c.includes(' > ')) continue;
+    const [parent, ...rest] = c.split(' > ');
+    const childName = rest.join(' > ');
+    if (topSet.has(parent)) {
+      (childrenByParent[parent] ??= []).push({ full: c, name: childName });
+    } else {
+      orphans.push(c);
+    }
+  }
+  const nodes: CategoryNode[] = tops.map((t) => ({
+    full: t,
+    name: t,
+    display: t,
+    children: childrenByParent[t] ?? [],
+  }));
+  for (const o of orphans) {
+    nodes.push({ full: o, name: o, display: o, children: [] });
+  }
+  return nodes;
 }
 
 const ownerBadge: React.CSSProperties = { fontSize: 11, padding: '3px 10px', background: '#e8efff', color: '#4a6bc4', borderRadius: 10, fontWeight: 600 };

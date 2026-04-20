@@ -219,7 +219,12 @@ export default function RecordForm({ project, currentUid, currentName, existing,
             ) : (
               <>
                 <option value="">선택</option>
-                {(project.categories ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
+                {(project.categories ?? []).map((c) => {
+                  const depth = c.split(' > ').length - 1;
+                  const last = c.split(' > ').slice(-1)[0];
+                  const label = depth > 0 ? `${'— '.repeat(depth)}${last}` : c;
+                  return <option key={c} value={c}>{label}</option>;
+                })}
               </>
             )}
           </select>
