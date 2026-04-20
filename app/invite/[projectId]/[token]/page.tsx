@@ -35,6 +35,8 @@ export default function InviteAcceptPage() {
       try {
         const t = await getInviteTokenByProject(projectId, token);
         if (!t) {
+          console.warn('invite token not found', { projectId, token });
+          setError(`토큰을 찾을 수 없습니다 (projectId=${projectId.slice(0, 6)}..., token=${token.slice(0, 6)}...)`);
           setStatus('invalid');
           return;
         }
@@ -47,17 +49,21 @@ export default function InviteAcceptPage() {
           setStatus('expired');
           return;
         }
-        const p = await getProject(projectId);
-        if (p) setProject(p);
-        if (p && p.memberIds.includes(user.uid)) {
-          setStatus('alreadyMember');
-          setTimeout(() => router.replace(`/projects/${projectId}`), 800);
-          return;
+        const p = await getProject(projectId).catch(() => null);
+        if (p) {
+          setProject(p);
+          if (p.memberIds.includes(user.uid)) {
+            setStatus('alreadyMember');
+            setTimeout(() => router.replace(`/projects/${projectId}`), 800);
+            return;
+          }
         }
         setDisplayName(user.displayName ?? user.email?.split('@')[0] ?? '');
         setStatus('inputName');
       } catch (e) {
-        console.error(e);
+        console.error('invite check failed', e);
+        const msg = e instanceof Error ? e.message : String(e);
+        setError(msg);
         setStatus('invalid');
       }
     })();
@@ -98,9 +104,16 @@ export default function InviteAcceptPage() {
         {status === 'checking' && <p style={{ textAlign: 'center', color: '#888' }}>초대 확인 중...</p>}
 
         {status === 'invalid' && (
-          <p style={{ color: '#c33', textAlign: 'center' }}>
-            유효하지 않은 초대 링크입니다.
-          </p>
+          <>
+            <p style={{ color: '#c33', textAlign: 'center' }}>
+              유효하지 않은 초대 링크입니다.
+            </p>
+            {error && (
+              <p style={{ color: '#888', fontSize: 11, textAlign: 'center', marginTop: 8, wordBreak: 'break-all' }}>
+                {error}
+              </p>
+            )}
+          </>
         )}
 
         {status === 'revoked' && (
