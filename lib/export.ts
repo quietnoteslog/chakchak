@@ -297,7 +297,7 @@ export async function exportRecordsToPdf(
   let pageSize: string;
 
   if (includeReceipts) {
-    pageSize = 'A4 landscape';
+    pageSize = 'A4 portrait';
     // 영수증 이미지 수집
     const imageMap: Record<number, string | null> = {};
     for (let i = 0; i < records.length; i++) {
@@ -324,7 +324,7 @@ export async function exportRecordsToPdf(
     }
     bodyHtml = pages.join('');
   } else {
-    pageSize = 'A4 landscape';
+    pageSize = 'A4 portrait';
     const amountColIndex = activeCols.findIndex((c) => c.key === 'amount');
     const headRow = `<tr>${activeCols.map((c) => `<th style="width:${c.width}${c.align === 'right' ? ';text-align:right' : c.align === 'center' ? ';text-align:center' : ''}">${c.label}</th>`).join('')}</tr>`;
     const bodyRows = records.map((r, i) => {
