@@ -465,6 +465,8 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 8,
   background: '#fff',
   outline: 'none',
+  width: '100%',
+  boxSizing: 'border-box',
 };
 
 const labelStyle: React.CSSProperties = {
@@ -477,7 +479,7 @@ const labelStyle: React.CSSProperties = {
 
 const row2: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
   gap: 12,
 };
 

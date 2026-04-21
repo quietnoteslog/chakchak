@@ -392,9 +392,9 @@ export async function exportRecordsToPdf(
   tr:nth-child(even) td { background: #F7F9FD; }
   tfoot td { font-weight: 700; background: #E8EFFF; border-top: 2px solid #7B9FE8; padding: 6px 5px; }
 
-  /* 레코드 페이지 (2열 landscape) */
-  .rp-page { page-break-before: always; display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; height: calc(100vh - 20mm); padding: 2mm 0; }
-  .rp-card { display: flex; flex-direction: column; min-height: 0; }
+  /* 레코드 페이지 (2열) */
+  .rp-page { page-break-before: always; break-before: page; display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; height: calc(297mm - 16mm); max-height: calc(297mm - 16mm); overflow: hidden; padding: 2mm 0; }
+  .rp-card { display: flex; flex-direction: column; height: 100%; max-height: 100%; overflow: hidden; }
   .rp-empty { visibility: hidden; }
   .rp-top { padding: 8px 10px; border: 2px solid #7B9FE8; border-radius: 6px; background: #F7F9FD; margin-bottom: 6px; flex-shrink: 0; }
   .rp-topmain { display: flex; align-items: center; gap: 8px; }
@@ -405,11 +405,11 @@ export async function exportRecordsToPdf(
   .rp-detail { display: flex; gap: 5px; align-items: baseline; overflow: hidden; }
   .rp-detail .k { color: #888; font-weight: 700; min-width: 40px; flex-shrink: 0; }
   .rp-detail .v { color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .rp-image-wrap { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0; }
-  .rp-image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #E5E9F2; }
+  .rp-image-wrap { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0; max-height: 100%; }
+  .rp-image-wrap img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; border: 1px solid #E5E9F2; }
   .rp-no-image { padding: 20px; border: 2px dashed #D0D6E2; border-radius: 6px; color: #888; font-size: 12px; }
 
-  @media print { body { padding: 0; } .rp-page { page-break-before: always; height: calc(100vh - 16mm); } }
+  @media print { body { padding: 0; } .rp-page { page-break-before: always; break-before: page; height: calc(297mm - 16mm); max-height: calc(297mm - 16mm); overflow: hidden; } }
 </style></head><body>
   ${coverHtml}
   <div class="cover-footer">착착 - ${projectName}</div>

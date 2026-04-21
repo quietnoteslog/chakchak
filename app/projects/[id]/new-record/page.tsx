@@ -42,7 +42,7 @@ export default function NewRecordPage() {
           ← 프로젝트
         </Link>
       </header>
-      <main style={{ maxWidth: 560, margin: '0 auto', padding: '24px 16px' }}>
+      <main style={{ maxWidth: 560, margin: '0 auto', padding: '24px 16px', overflowX: 'hidden' }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, marginTop: 0, marginBottom: 20 }}>내역 추가</h1>
         <RecordForm
           project={project}
