@@ -269,9 +269,13 @@ function renderRecordCard(r: ExpenseRecord, index: number, imgDataUrl: string | 
     const v = cellValue(r, c.key, index);
     return `<div class="rp-detail"><span class="k">${c.label}</span><span class="v">${v}</span></div>`;
   }).join('');
-  const imageHtml = imgDataUrl
-    ? `<img src="${imgDataUrl}" alt="receipt ${no}" />`
-    : `<div class="rp-no-image">영수증 없음</div>`;
+  const isPdfReceipt = imgDataUrl?.startsWith('__pdf__:');
+  const pdfUrl = isPdfReceipt ? imgDataUrl!.slice('__pdf__:'.length) : '';
+  const imageHtml = isPdfReceipt
+    ? `<div class="rp-pdf-placeholder"><div style="font-size:28px;margin-bottom:6px">📄</div><div style="font-size:11px;font-weight:700;color:#4a6bc4;margin-bottom:4px">PDF 영수증</div><a href="${escapeHtml(pdfUrl)}" style="font-size:10px;color:#7b9fe8;word-break:break-all">${escapeHtml(pdfUrl.slice(0, 60))}...</a></div>`
+    : imgDataUrl
+      ? `<img src="${imgDataUrl}" alt="receipt ${no}" />`
+      : `<div class="rp-no-image">영수증 없음</div>`;
   return `
     <article class="rp-card">
       <div class="rp-top">
@@ -350,7 +354,7 @@ export async function exportRecordsToPdf(
       if (!r.receiptPath && !r.receiptUrl) return null;
       try {
         const blob = await fetchReceiptBlob(r.receiptPath, r.receiptUrl);
-        if (blob.type === 'application/pdf') return null;
+        if (blob.type === 'application/pdf') return `__pdf__:${r.receiptUrl}`;
         return await blobToDataUrl(blob);
       } catch (e) {
         console.warn('receipt fetch failed', r.id, e);
@@ -408,6 +412,7 @@ export async function exportRecordsToPdf(
   .rp-image-wrap { display: flex; align-items: flex-start; justify-content: center; }
   .rp-image-wrap img { max-width: 88mm; max-height: 205mm; width: auto; height: auto; display: block; border: 1px solid #E5E9F2; }
   .rp-no-image { padding: 12px; border: 2px dashed #D0D6E2; border-radius: 6px; color: #888; font-size: 12px; }
+  .rp-pdf-placeholder { padding: 16px 12px; border: 2px dashed #b5c4e8; border-radius: 6px; background: #eef4ff; text-align: center; }
 
   @media print { body { padding: 0; } .rp-page { page-break-before: always; break-before: page; } .rp-card { page-break-inside: avoid; break-inside: avoid; } .rp-image-wrap img { max-width: 88mm; max-height: 205mm; } }
 </style></head><body>
