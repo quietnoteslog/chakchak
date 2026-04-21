@@ -22,6 +22,24 @@ export default function InviteAcceptPage() {
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showInstall, setShowInstall] = useState(false);
+  const [isWebView, setIsWebView] = useState(false);
+
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const webview = /KAKAOTALK|Instagram|NAVER|Line|FB_IAB|FBAN|FBAV|Twitter|Snapchat|Musical|TikTok|LinkedInApp|MicroMessenger|wv\b/.test(ua)
+      || (/Android/.test(ua) && /; wv\)/.test(ua));
+    setIsWebView(webview);
+  }, []);
+
+  const openInExternalBrowser = () => {
+    const url = window.location.href;
+    const ua = navigator.userAgent;
+    if (/iPhone|iPad|iPod/i.test(ua)) {
+      window.open(url, '_blank');
+    } else {
+      window.location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;action=android.intent.action.VIEW;package=com.android.chrome;end`;
+    }
+  };
 
   useEffect(() => {
     if (loading) return; // 인증 상태 확정까지 대기
@@ -137,11 +155,16 @@ export default function InviteAcceptPage() {
             <p style={{ textAlign: 'center', fontSize: 13, color: '#555', marginBottom: 16 }}>
               프로젝트에 참여하려면 로그인이 필요합니다.
             </p>
+            {isWebView && (
+              <div style={{ background: 'rgba(255,200,100,0.15)', border: '1px solid rgba(200,160,0,0.3)', borderRadius: 10, padding: '10px 12px', marginBottom: 12, fontSize: 12, color: '#666', lineHeight: 1.5 }}>
+                앱 내 브라우저에서는 Google 로그인이 차단됩니다.<br />Chrome 또는 Safari에서 열어주세요.
+              </div>
+            )}
             <button
-              onClick={signInWithGoogle}
+              onClick={isWebView ? openInExternalBrowser : signInWithGoogle}
               style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid #d0d6e2', background: '#fff', color: '#444', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 10 }}
             >
-              Google로 로그인
+              {isWebView ? 'Chrome / Safari에서 열기' : 'Google로 로그인'}
             </button>
             <a
               href={`/login?redirect=/invite/${projectId}/${token}`}
