@@ -130,9 +130,9 @@ function LoginPageInner() {
 
         {mode === 'select' && (
           <>
-            <button onClick={onGoogle} disabled={busy} style={googleBtn}>
+            <button onClick={isWebView ? openInExternalBrowser : onGoogle} disabled={busy} style={googleBtn}>
               <GoogleIcon />
-              Google로 로그인
+              {isWebView ? 'Chrome / Safari에서 열기' : 'Google로 로그인'}
             </button>
             <div style={divider}>
               <span style={dividerLine} />
