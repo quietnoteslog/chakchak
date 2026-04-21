@@ -47,6 +47,8 @@ export default function ProjectDetailPage() {
   const [filterPayer, setFilterPayer] = useState<string>('');         // 결제자 uid
   const [filterPaymentType, setFilterPaymentType] = useState<string>(''); // 결제수단
   const [filterQuery, setFilterQuery] = useState<string>('');         // 검색어
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');   // 기간 시작
+  const [filterDateTo, setFilterDateTo] = useState<string>('');       // 기간 종료
   const [showFilter, setShowFilter] = useState(false);
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [pdfColumns, setPdfColumns] = useState<Record<string, boolean>>({
@@ -104,6 +106,11 @@ export default function ProjectDetailPage() {
     if (filterCategory2 && r.categoryId2 !== filterCategory2) return false;
     if (filterPayer && r.payerId !== filterPayer) return false;
     if (filterPaymentType && r.paymentType !== filterPaymentType) return false;
+    if (filterDateFrom || filterDateTo) {
+      const d = r.date.toDate().toISOString().slice(0, 10);
+      if (filterDateFrom && d < filterDateFrom) return false;
+      if (filterDateTo && d > filterDateTo) return false;
+    }
     if (q) {
       const hay = `${r.merchant ?? ''} ${r.content ?? ''} ${r.memo ?? ''} ${r.userNames ?? ''}`.toLowerCase();
       if (!hay.includes(q)) return false;
@@ -114,9 +121,10 @@ export default function ProjectDetailPage() {
   const foreignTotals = visibleRecords
     .filter(r => r.currency && r.currency !== 'KRW')
     .reduce((acc, r) => { acc[r.currency!] = (acc[r.currency!] ?? 0) + r.amount; return acc; }, {} as Record<string, number>);
-  const activeFilterCount = [filterType, filterCategory2, filterPayer, filterPaymentType, q].filter(Boolean).length;
+  const activeFilterCount = [filterType, filterCategory2, filterPayer, filterPaymentType, q, filterDateFrom, filterDateTo].filter(Boolean).length;
   const resetFilters = () => {
     setFilterType(''); setFilterCategory2(''); setFilterPayer(''); setFilterPaymentType(''); setFilterQuery('');
+    setFilterDateFrom(''); setFilterDateTo('');
   };
 
   const onDeleteProject = async () => {
@@ -404,6 +412,14 @@ export default function ProjectDetailPage() {
                         <option key={uid} value={uid}>{(project.memberNames ?? {})[uid] ?? uid}</option>
                       ))}
                     </select>
+                  </label>
+                  <label style={{ display: 'grid', gap: 4, gridColumn: '1 / -1' }}>
+                    <span style={filterLabel}>기간</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} style={{ ...inlineInput, flex: 1 }} />
+                      <span style={{ color: '#888', fontSize: 12 }}>~</span>
+                      <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} style={{ ...inlineInput, flex: 1 }} />
+                    </div>
                   </label>
                   <label style={{ display: 'grid', gap: 4, gridColumn: '1 / -1' }}>
                     <span style={filterLabel}>검색어 (구매처/내용/메모/이용자)</span>

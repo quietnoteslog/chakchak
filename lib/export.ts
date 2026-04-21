@@ -326,19 +326,19 @@ export async function exportRecordsToPdf(
   // 영수증 페이지 (포함 시)
   let receiptPagesHtml = '';
   if (includeReceipts) {
-    const imageMap: Record<number, string | null> = {};
-    for (let i = 0; i < records.length; i++) {
-      const r = records[i];
-      if (!r.receiptPath && !r.receiptUrl) { imageMap[i] = null; continue; }
+    const fetchOne = async (r: ExpenseRecord, i: number): Promise<string | null> => {
+      if (!r.receiptPath && !r.receiptUrl) return null;
       try {
         const blob = await fetchReceiptBlob(r.receiptPath, r.receiptUrl);
-        if (blob.type === 'application/pdf') { imageMap[i] = null; continue; }
-        imageMap[i] = await blobToDataUrl(blob);
+        if (blob.type === 'application/pdf') return null;
+        return await blobToDataUrl(blob);
       } catch (e) {
         console.warn('receipt fetch failed', r.id, e);
-        imageMap[i] = null;
+        return null;
       }
-    }
+    };
+    const imageArr = await Promise.all(records.map((r, i) => fetchOne(r, i)));
+    const imageMap: Record<number, string | null> = Object.fromEntries(imageArr.map((v, i) => [i, v]));
 
     const pages: string[] = [];
     for (let i = 0; i < records.length; i += 2) {
