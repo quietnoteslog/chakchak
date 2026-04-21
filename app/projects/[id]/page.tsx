@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, FormEvent } from 'react';
+import React, { useEffect, useState, FormEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, FileSpreadsheet, FileText, Archive, X, Users, Settings, Image as ImageIcon, AlertCircle } from 'lucide-react';
@@ -671,18 +671,28 @@ const PDF_COLUMN_DEFS: { key: string; label: string; note?: string }[] = [
 ];
 
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  const [pressed, setPressed] = React.useState(false);
   return (
     <button
       onClick={onClick}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      onMouseLeave={() => setPressed(false)}
+      onTouchStart={() => setPressed(true)}
+      onTouchEnd={() => setPressed(false)}
       style={{
         padding: '8px 14px',
         fontSize: 13,
         fontWeight: 600,
-        border: `1px solid ${active ? '#7b9fe8' : '#d0d6e2'}`,
-        background: active ? '#7b9fe8' : '#fff',
-        color: active ? '#fff' : '#555',
+        border: `1px solid ${active ? 'transparent' : '#d0d6e2'}`,
+        background: active
+          ? 'linear-gradient(135deg, #a8c8f8 0%, #7b9fe8 50%, #8b7fd4 100%)'
+          : pressed ? '#eef4ff' : '#fff',
+        color: active ? '#fff' : pressed ? '#4a6bc4' : '#555',
         borderRadius: 8,
         cursor: 'pointer',
+        transition: 'background 0.15s, color 0.15s',
+        boxShadow: active ? '0 2px 8px rgba(123,159,232,0.3)' : 'none',
       }}
     >
       {children}
