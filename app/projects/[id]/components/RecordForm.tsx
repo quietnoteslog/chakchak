@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, FormEvent, ChangeEvent, DragEvent } from 'react';
+import { Camera } from 'lucide-react';
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { addRecord, updateRecord, RecordInput, addCategory, addCategory2 } from '@/lib/firestore';
@@ -219,7 +220,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
           onDragLeave={onDragLeave}
           onDrop={onDrop}
         >
-          <span style={{ fontSize: 32, marginBottom: 4 }}>📷</span>
+          <Camera size={32} style={{ marginBottom: 4, color: '#7b9fe8' }} />
           <strong style={{ fontSize: 14, marginBottom: 2, color: '#333' }}>
             {dragActive ? '여기에 놓으세요' : '영수증 촬영·선택·드래그 (선택)'}
           </strong>

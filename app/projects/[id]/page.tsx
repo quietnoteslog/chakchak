@@ -49,6 +49,8 @@ export default function ProjectDetailPage() {
   const [filterQuery, setFilterQuery] = useState<string>('');         // 검색어
   const [filterDateFrom, setFilterDateFrom] = useState<string>('');   // 기간 시작
   const [filterDateTo, setFilterDateTo] = useState<string>('');       // 기간 종료
+  const [filterAmountMin, setFilterAmountMin] = useState<string>(''); // 금액 최소
+  const [filterAmountMax, setFilterAmountMax] = useState<string>(''); // 금액 최대
   const [showFilter, setShowFilter] = useState(false);
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [pdfColumns, setPdfColumns] = useState<Record<string, boolean>>({
@@ -111,6 +113,8 @@ export default function ProjectDetailPage() {
       if (filterDateFrom && d < filterDateFrom) return false;
       if (filterDateTo && d > filterDateTo) return false;
     }
+    if (filterAmountMin && r.amount < Number(filterAmountMin)) return false;
+    if (filterAmountMax && r.amount > Number(filterAmountMax)) return false;
     if (q) {
       const hay = `${r.merchant ?? ''} ${r.content ?? ''} ${r.memo ?? ''} ${r.userNames ?? ''}`.toLowerCase();
       if (!hay.includes(q)) return false;
@@ -121,10 +125,10 @@ export default function ProjectDetailPage() {
   const foreignTotals = visibleRecords
     .filter(r => r.currency && r.currency !== 'KRW')
     .reduce((acc, r) => { acc[r.currency!] = (acc[r.currency!] ?? 0) + r.amount; return acc; }, {} as Record<string, number>);
-  const activeFilterCount = [filterType, filterCategory2, filterPayer, filterPaymentType, q, filterDateFrom, filterDateTo].filter(Boolean).length;
+  const activeFilterCount = [filterType, filterCategory2, filterPayer, filterPaymentType, q, filterDateFrom, filterDateTo, filterAmountMin, filterAmountMax].filter(Boolean).length;
   const resetFilters = () => {
     setFilterType(''); setFilterCategory2(''); setFilterPayer(''); setFilterPaymentType(''); setFilterQuery('');
-    setFilterDateFrom(''); setFilterDateTo('');
+    setFilterDateFrom(''); setFilterDateTo(''); setFilterAmountMin(''); setFilterAmountMax('');
   };
 
   const onDeleteProject = async () => {
@@ -414,6 +418,14 @@ export default function ProjectDetailPage() {
                     </select>
                   </label>
                   <label style={{ display: 'grid', gap: 4, gridColumn: '1 / -1' }}>
+                    <span style={filterLabel}>금액</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input type="number" value={filterAmountMin} onChange={(e) => setFilterAmountMin(e.target.value)} placeholder="최소" inputMode="numeric" style={{ ...inlineInput, flex: 1 }} />
+                      <span style={{ color: '#888', fontSize: 12 }}>~</span>
+                      <input type="number" value={filterAmountMax} onChange={(e) => setFilterAmountMax(e.target.value)} placeholder="최대" inputMode="numeric" style={{ ...inlineInput, flex: 1 }} />
+                    </div>
+                  </label>
+                  <label style={{ display: 'grid', gap: 4, gridColumn: '1 / -1' }}>
                     <span style={filterLabel}>기간</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} style={{ ...inlineInput, flex: 1 }} />
@@ -493,7 +505,7 @@ export default function ProjectDetailPage() {
                             <td style={tdStyle}><span style={tag}>{r.type}</span></td>
                             <td style={{ ...tdStyle, color: '#666' }}>{r.categoryId || '-'}</td>
                             <td style={{ ...tdStyle, color: '#666' }}>{r.categoryId2 || '-'}</td>
-                            <td style={{ ...tdStyle, fontWeight: 600 }}>{r.merchant}</td>
+                            <td style={tdStyle}>{r.merchant}</td>
                             <td style={{ ...tdStyle, color: '#666', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.content}>{r.content || '-'}</td>
                             <td style={{ ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
                               {r.currency && r.currency !== 'KRW'
