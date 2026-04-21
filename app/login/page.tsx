@@ -25,6 +25,14 @@ function LoginPageInner() {
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [isWebView, setIsWebView] = useState(false);
+
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const webview = /KAKAOTALK|Instagram|NAVER|Line|FB_IAB|FBAN|FBAV|Twitter|Snapchat|Musical|TikTok|LinkedInApp|MicroMessenger|wv\b/.test(ua)
+      || (/Android/.test(ua) && /; wv\)/.test(ua));
+    setIsWebView(webview);
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
@@ -87,6 +95,19 @@ function LoginPageInner() {
           width: 380, boxShadow: '0 8px 32px rgba(100, 120, 200, 0.2)', position: 'relative', zIndex: 1,
         }}
       >
+        {isWebView && (
+          <div style={{ background: 'rgba(255,200,100,0.25)', border: '1px solid rgba(255,200,100,0.5)', borderRadius: 12, padding: '12px 14px', marginBottom: 20, color: '#fff', fontSize: 13, lineHeight: 1.5 }}>
+            <strong>앱 내 브라우저에서는 Google 로그인이 차단됩니다.</strong><br />
+            Chrome 또는 Safari에서 열어주세요.<br />
+            <button
+              type="button"
+              onClick={() => { navigator.clipboard?.writeText(window.location.href); alert('주소가 복사됐습니다. Chrome/Safari에 붙여넣기 해주세요.'); }}
+              style={{ marginTop: 8, padding: '6px 12px', fontSize: 12, background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 6, color: '#fff', cursor: 'pointer' }}
+            >
+              URL 복사
+            </button>
+          </div>
+        )}
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
           <span style={{ fontSize: 36 }}>✅</span>
         </div>
