@@ -44,6 +44,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
   const [merchant, setMerchant] = useState(existing?.merchant ?? '');
   const [content, setContent] = useState(existing?.content ?? '');
   const [amount, setAmount] = useState(existing ? String(existing.amount) : '');
+  const [currency, setCurrency] = useState(existing?.currency ?? 'KRW');
   const [paymentType, setPaymentType] = useState<PaymentType>(existing?.paymentType ?? '법인카드');
   const [paymentCardId, setPaymentCardId] = useState<string>(existing?.paymentCardId ?? ((project.paymentCards ?? [])[0]?.id ?? ''));
   const [payerId, setPayerId] = useState<string>(existing?.payerId ?? currentUid);
@@ -115,6 +116,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
       if (result.amount != null) setAmount(String(result.amount));
       if (result.date) setDate(result.date);
       if (result.merchant) setMerchant(result.merchant);
+      if (result.currency) setCurrency(result.currency);
       setStage('form');
     } catch (err) {
       console.error(err);
@@ -173,6 +175,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         merchant: merchant.trim(),
         content: content.trim(),
         amount: amt,
+        currency: currency !== 'KRW' ? currency : undefined,
         paymentType,
         paymentCardId: paymentType === '법인카드' ? paymentCardId : '',
         paymentCardLabel,
@@ -290,8 +293,18 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         </Field>
       </div>
 
-      <Field label="금액 (원) *">
-        <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} placeholder="0" inputMode="numeric" />
+      <Field label="금액 *">
+        <div style={{ display: 'flex', gap: 8 }}>
+          <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={{ ...inputStyle, width: 90, flexShrink: 0 }}>
+            <option value="KRW">KRW ₩</option>
+            <option value="USD">USD $</option>
+            <option value="JPY">JPY ¥</option>
+            <option value="EUR">EUR €</option>
+            <option value="CNY">CNY ¥</option>
+            <option value="GBP">GBP £</option>
+          </select>
+          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="0" inputMode="numeric" />
+        </div>
       </Field>
 
       <div>

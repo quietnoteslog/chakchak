@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;padding:0;background:#f5f7fb;font-family:var(--chak-font-sans);color:#333}
+  .card{padding:20px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  button{font-family:inherit}
+  .primary{padding:10px 16px;background:#7b9fe8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+  .primary.busy{background:#b5c4e8;cursor:default}
+  .secondary{padding:8px 14px;background:#fff;border:1px solid #d0d6e2;border-radius:8px;font-size:13px;color:#555;cursor:pointer;font-weight:600}
+  .danger{padding:8px 14px;background:#fff;border:1px solid #f0c8c8;border-radius:8px;font-size:13px;color:#c33;cursor:pointer;font-weight:600}
+  .small{padding:6px 12px;font-size:12px;background:#fff;border:1px solid #d0d6e2;border-radius:6px;font-weight:600;color:#333;cursor:pointer}
+  .mini{padding:4px 10px;font-size:11px;background:#fff;border:1px solid #d0d6e2;border-radius:6px;color:#555;cursor:pointer}
+  .pill{padding:14px 0;width:220px;border-radius:50px;border:none;background:#fff;color:#444;font-size:14px;font-weight:600;letter-spacing:.04em;box-shadow:0 2px 12px rgba(0,0,0,.12);cursor:pointer}
+</style></head><body><div class="card">
+  <div class="row">
+    <button class="primary">+ 새 프로젝트</button>
+    <button class="primary busy">저장 중...</button>
+    <button class="secondary">취소</button>
+    <button class="danger">프로젝트 삭제</button>
+  </div>
+  <div class="row">
+    <button class="small">📊 엑셀</button>
+    <button class="small">📄 PDF</button>
+    <button class="small">📦 Zip</button>
+    <button class="mini">수정</button>
+    <button class="mini" style="color:#c33;border-color:#f0c8c8">삭제</button>
+  </div>
+  <div class="row">
+    <button class="pill">Google로 로그인</button>
+  </div>
+</div></body></html>

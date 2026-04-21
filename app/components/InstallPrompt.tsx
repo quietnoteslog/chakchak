@@ -128,7 +128,7 @@ const modal: React.CSSProperties = {
   boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
 };
 const btnPrimary: React.CSSProperties = {
-  flex: 2, padding: '12px 0', background: '#7b9fe8', color: '#fff', border: 'none',
+  flex: 2, padding: '12px 0', background: 'linear-gradient(135deg, #a8c8f8 0%, #7b9fe8 50%, #8b7fd4 100%)', color: '#fff', border: 'none',
   borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer',
 };
 const btnSecondary: React.CSSProperties = {

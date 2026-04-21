@@ -65,6 +65,7 @@ export interface ExpenseRecord {
   merchant: string;
   content: string;
   amount: number;
+  currency?: string;         // 통화 코드 (기본 KRW, 해외 영수증 시 USD/JPY 등)
   paymentType: PaymentType;
   paymentCardId: string;
   paymentCardLabel: string;
@@ -84,6 +85,7 @@ export interface OcrResult {
   merchant: string | null;
   amount: number | null;
   date: string | null;
+  currency: string | null;   // 통화 코드 (KRW, USD, JPY 등)
   confidence: number;
 }
 

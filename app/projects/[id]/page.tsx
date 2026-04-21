@@ -252,8 +252,8 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#f5f7fb' }}>
-      <header style={{ padding: '16px 20px', background: '#fff', borderBottom: '1px solid #e5e9f2' }}>
-        <Link href="/dashboard" style={{ fontSize: 14, color: '#555', textDecoration: 'none' }}>← 프로젝트 목록</Link>
+      <header style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #a8c8f8 0%, #7b9fe8 50%, #8b7fd4 100%)' }}>
+        <Link href="/dashboard" style={{ fontSize: 14, color: '#fff', textDecoration: 'none', opacity: 0.9 }}>← 프로젝트 목록</Link>
       </header>
 
       <main style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
@@ -604,7 +604,7 @@ function formatMoney(n: number): string {
 }
 
 const ownerBadge: React.CSSProperties = { fontSize: 11, padding: '3px 10px', background: '#e8efff', color: '#4a6bc4', borderRadius: 10, fontWeight: 600 };
-const btnPrimary: React.CSSProperties = { padding: '10px 16px', background: '#7b9fe8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none', cursor: 'pointer', display: 'inline-block' };
+const btnPrimary: React.CSSProperties = { padding: '10px 16px', background: 'linear-gradient(135deg, #a8c8f8 0%, #7b9fe8 50%, #8b7fd4 100%)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none', cursor: 'pointer', display: 'inline-block' };
 const btnSecondary: React.CSSProperties = { padding: '8px 14px', background: '#fff', border: '1px solid #d0d6e2', borderRadius: 8, fontSize: 13, color: '#555', textDecoration: 'none' };
 const btnSmall: React.CSSProperties = { padding: '6px 12px', fontSize: 12, background: '#fff', border: '1px solid #d0d6e2', borderRadius: 6, cursor: 'pointer', fontWeight: 600, color: '#333' };
 const summaryBox: React.CSSProperties = { padding: 16, background: '#fff', borderRadius: 12, border: '1px solid #e5e9f2', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 };

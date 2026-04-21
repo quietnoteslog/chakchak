@@ -1,25 +1,92 @@
 @import "tailwindcss";
 
+/* ── Pretendard ─────────────────────────────────────────── */
+@font-face { font-family:'Pretendard'; src:url('/fonts/Pretendard-Light.otf') format('opentype'); font-weight:300; font-display:swap; }
+@font-face { font-family:'Pretendard'; src:url('/fonts/Pretendard-Regular.otf') format('opentype'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Pretendard'; src:url('/fonts/Pretendard-Medium.otf') format('opentype'); font-weight:500; font-display:swap; }
+@font-face { font-family:'Pretendard'; src:url('/fonts/Pretendard-SemiBold.otf') format('opentype'); font-weight:600; font-display:swap; }
+@font-face { font-family:'Pretendard'; src:url('/fonts/Pretendard-Bold.otf') format('opentype'); font-weight:700; font-display:swap; }
+@font-face { font-family:'Pretendard'; src:url('/fonts/Pretendard-ExtraBold.otf') format('opentype'); font-weight:800; font-display:swap; }
+@font-face { font-family:'Pretendard'; src:url('/fonts/Pretendard-Black.otf') format('opentype'); font-weight:900; font-display:swap; }
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
   color-scheme: light;
+
+  /* Brand / Primary */
+  --chak-primary: #7b9fe8;
+  --chak-primary-dark: #4a6bc4;
+  --chak-primary-tint: #eef4ff;
+  --chak-primary-tint-2: #e8efff;
+  --chak-primary-disabled: #b5c4e8;
+
+  /* Gradient */
+  --chak-grad-1: #a8c8f8;
+  --chak-grad-2: #7b9fe8;
+  --chak-grad-3: #8b7fd4;
+  --chak-grad-4: #b8d4f8;
+  --chak-gradient: linear-gradient(135deg, #a8c8f8 0%, #7b9fe8 50%, #8b7fd4 100%);
+
+  /* Neutrals */
+  --chak-bg: #f5f7fb;
+  --chak-surface: #ffffff;
+  --chak-surface-muted: #f0f2f8;
+  --chak-border: #e5e9f2;
+  --chak-border-strong: #d0d6e2;
+  --chak-border-soft: #eef1f7;
+  --chak-border-dashed: #c5cfe4;
+
+  /* Text */
+  --chak-fg: #171717;
+  --chak-fg-strong: #222;
+  --chak-fg-1: #333;
+  --chak-fg-2: #555;
+  --chak-fg-3: #666;
+  --chak-fg-4: #888;
+
+  /* Semantic */
+  --chak-danger: #c33;
+  --chak-danger-border: #f0c8c8;
+  --chak-danger-bg: rgba(200,60,60,0.25);
+  --chak-success: #3a8e5f;
+  --chak-success-tint: #e8f5e9;
+  --chak-success-border: #c6e7c9;
+
+  /* Radii */
+  --chak-r-sm: 6px;
+  --chak-r-md: 8px;
+  --chak-r-lg: 10px;
+  --chak-r-xl: 12px;
+  --chak-r-2xl: 14px;
+  --chak-r-3xl: 16px;
+  --chak-r-24: 24px;
+  --chak-r-pill: 50px;
+  --chak-r-full: 9999px;
+
+  /* Shadows */
+  --chak-shadow-card: 0 1px 2px rgba(100,120,180,0.04);
+  --chak-shadow-btn: 0 2px 12px rgba(0,0,0,0.12);
+  --chak-shadow-modal: 0 10px 40px rgba(0,0,0,0.2);
+  --chak-shadow-glass: 0 8px 32px rgba(100,120,200,0.2);
+
+  /* Typography */
+  --chak-font-sans: 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--chak-bg);
+  --color-foreground: var(--chak-fg);
+  --font-sans: var(--chak-font-sans);
 }
 
 html, body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--chak-bg);
+  color: var(--chak-fg);
+  font-family: var(--chak-font-sans);
+  -webkit-font-smoothing: antialiased;
   color-scheme: light;
 }
 
 input, select, textarea, button {
   color-scheme: light;
+  font-family: var(--chak-font-sans);
 }

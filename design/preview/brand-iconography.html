@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>착착 · Iconography (Lucide)</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;padding:0;background:#fff;font-family:var(--chak-font-sans);color:var(--chak-fg)}
+  .wrap{padding:24px 28px;max-width:920px}
+  h2{font:700 14px/1.3 var(--chak-font-sans);margin:0 0 6px;letter-spacing:.02em;color:#222}
+  .sub{font:400 12px/1.5 var(--chak-font-sans);color:#666;margin:0 0 14px}
+  .section{margin-bottom:28px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:10px}
+  .cell{
+    border:1px solid var(--chak-border);
+    border-radius:12px;
+    background:#fff;
+    padding:14px 10px 10px;
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+  }
+  .ic{
+    width:44px;height:44px;border-radius:10px;background:var(--chak-primary-tint);
+    color:var(--chak-primary-dark);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .name{font:600 11px/1.3 var(--chak-font-sans);color:#333;text-align:center}
+  .tag{font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8a93a6}
+
+  .pair{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:10px}
+  .pair .cell{flex-direction:row;justify-content:flex-start;gap:10px;padding:10px 12px}
+  .pair .ic{width:36px;height:36px;border-radius:8px;flex:none}
+  .pair .meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .pair .meta .name{text-align:left}
+  .pair .old{font:500 14px/1 'Apple Color Emoji','Segoe UI Emoji',sans-serif;color:#555}
+
+  .sizes{display:flex;align-items:flex-end;gap:18px;border:1px solid var(--chak-border);border-radius:12px;padding:16px 18px;background:#fff}
+  .sizes .cell{border:none;padding:0;gap:4px}
+  .sizes .ic{background:transparent;color:#222}
+
+  .swatch-row{display:flex;gap:10px;flex-wrap:wrap}
+  .swatch{border:1px solid var(--chak-border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;font:600 12px/1 var(--chak-font-sans)}
+  .sw-primary{background:var(--chak-primary);color:#fff;border-color:var(--chak-primary)}
+  .sw-tint{background:var(--chak-primary-tint);color:var(--chak-primary-dark);border-color:#dbe5f5}
+  .sw-fg{background:#fff;color:#555}
+  .sw-danger{background:#fff;color:var(--chak-danger)}
+  .sw-success{background:#fff;color:var(--chak-success-strong)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="section">
+    <h2>브랜드 · 기능 아이콘</h2>
+    <p class="sub">기존 이모지를 대체하는 Lucide 세트 (stroke 2px, rounded). 기능 라벨 왼쪽에 1개씩만, 장식 금지.</p>
+    <div class="pair">
+      <div class="cell"><div class="ic"><span data-chak-icon="check-circle-2" data-size="20"></span></div><div class="meta"><span class="name">브랜드 체크</span><span class="old">check-circle-2</span></div></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="camera" data-size="20"></span></div><div class="meta"><span class="name">영수증 촬영</span><span class="old">camera</span></div></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="file-spreadsheet" data-size="20"></span></div><div class="meta"><span class="name">엑셀 내보내기</span><span class="old">file-spreadsheet</span></div></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="file-text" data-size="20"></span></div><div class="meta"><span class="name">PDF 내보내기</span><span class="old">file-text</span></div></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="package" data-size="20"></span></div><div class="meta"><span class="name">Zip 묶음</span><span class="old">package</span></div></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="sliders-horizontal" data-size="20"></span></div><div class="meta"><span class="name">필터</span><span class="old">sliders-horizontal</span></div></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="smartphone" data-size="20"></span></div><div class="meta"><span class="name">앱 설치</span><span class="old">smartphone</span></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>내비게이션 · 편집</h2>
+    <p class="sub">화살표 · X 유니코드 대신 Lucide.</p>
+    <div class="grid">
+      <div class="cell"><div class="ic"><span data-chak-icon="arrow-left" data-size="20"></span></div><span class="name">뒤로</span><span class="tag">arrow-left</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="arrow-right" data-size="20"></span></div><span class="name">다음</span><span class="tag">arrow-right</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="arrow-up" data-size="20"></span></div><span class="name">위로</span><span class="tag">arrow-up</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="arrow-down" data-size="20"></span></div><span class="name">아래로</span><span class="tag">arrow-down</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="chevron-left" data-size="20"></span></div><span class="name">chevron-left</span><span class="tag">상세 → 목록</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="chevron-right" data-size="20"></span></div><span class="name">chevron-right</span><span class="tag">리스트 진입</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="x" data-size="20"></span></div><span class="name">닫기</span><span class="tag">x</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="plus" data-size="20"></span></div><span class="name">추가</span><span class="tag">plus</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="check" data-size="20"></span></div><span class="name">확인</span><span class="tag">check</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="pencil" data-size="20"></span></div><span class="name">편집</span><span class="tag">pencil</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="trash-2" data-size="20"></span></div><span class="name">삭제</span><span class="tag">trash-2</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="search" data-size="20"></span></div><span class="name">검색</span><span class="tag">search</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>도메인 · 보조</h2>
+    <p class="sub">프로젝트/멤버/공유 등 자주 쓰이는 보조 아이콘.</p>
+    <div class="grid">
+      <div class="cell"><div class="ic"><span data-chak-icon="users" data-size="20"></span></div><span class="name">멤버</span><span class="tag">users</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="user-plus" data-size="20"></span></div><span class="name">멤버 초대</span><span class="tag">user-plus</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="link" data-size="20"></span></div><span class="name">초대 링크</span><span class="tag">link</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="copy" data-size="20"></span></div><span class="name">복사</span><span class="tag">copy</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="calendar" data-size="20"></span></div><span class="name">날짜</span><span class="tag">calendar</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="folder" data-size="20"></span></div><span class="name">프로젝트</span><span class="tag">folder</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="receipt" data-size="20"></span></div><span class="name">내역</span><span class="tag">receipt</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="image" data-size="20"></span></div><span class="name">영수증 이미지</span><span class="tag">image</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="download" data-size="20"></span></div><span class="name">다운로드</span><span class="tag">download</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="share" data-size="20"></span></div><span class="name">공유</span><span class="tag">share</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="log-out" data-size="20"></span></div><span class="name">로그아웃</span><span class="tag">log-out</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="settings" data-size="20"></span></div><span class="name">설정</span><span class="tag">settings</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="alert-circle" data-size="20"></span></div><span class="name">경고</span><span class="tag">alert-circle</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="info" data-size="20"></span></div><span class="name">안내</span><span class="tag">info</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>크기 스케일</h2>
+    <p class="sub">라벨 옆 16 · 버튼·칩 20 · 섹션 헤더 24 · 빈 상태/모달 32.</p>
+    <div class="sizes">
+      <div class="cell"><div class="ic"><span data-chak-icon="camera" data-size="14"></span></div><span class="tag">14</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="camera" data-size="16"></span></div><span class="tag">16</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="camera" data-size="20"></span></div><span class="tag">20 ⭐ 기본</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="camera" data-size="24"></span></div><span class="tag">24</span></div>
+      <div class="cell"><div class="ic"><span data-chak-icon="camera" data-size="32"></span></div><span class="tag">32</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>색상 사용</h2>
+    <p class="sub">아이콘은 <code>currentColor</code>. 상황별 텍스트 색을 그대로 따라가도록 둔다.</p>
+    <div class="swatch-row">
+      <span class="swatch sw-primary"><span data-chak-icon="plus" data-size="16"></span> 새 프로젝트</span>
+      <span class="swatch sw-tint"><span data-chak-icon="sliders-horizontal" data-size="16"></span> 필터 (2)</span>
+      <span class="swatch sw-fg"><span data-chak-icon="arrow-left" data-size="16"></span> 프로젝트</span>
+      <span class="swatch sw-danger"><span data-chak-icon="trash-2" data-size="16"></span> 삭제</span>
+      <span class="swatch sw-success"><span data-chak-icon="check-circle-2" data-size="16"></span> 초대 완료</span>
+    </div>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+</body>
+</html>

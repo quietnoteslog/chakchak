@@ -39,14 +39,16 @@ export async function POST(req: NextRequest) {
 
 {
   "merchant": string | null,   // 가맹점(상호)명. 못 읽으면 null
-  "amount": number | null,     // 총 결제 금액(원, 정수). 못 읽으면 null
+  "amount": number | null,     // 총 결제 금액(정수, 통화기호/쉼표 제외). 못 읽으면 null
   "date": string | null,       // 거래 일자 "YYYY-MM-DD". 못 읽으면 null
+  "currency": string | null,   // ISO 4217 통화 코드 (예: "KRW", "USD", "JPY", "EUR"). 판단 불가 시 null
   "confidence": number         // 0.0 ~ 1.0 신뢰도 (모든 필드 평균)
 }
 
 주의:
 - 금액은 정수만 (1000 등). 통화기호/쉼표 제외.
 - 날짜는 반드시 YYYY-MM-DD 형식.
+- 통화는 영수증에 명시된 통화 또는 언어/국가 맥락으로 판단. 한국 영수증이면 "KRW".
 - 영수증이 아니거나 읽을 수 없으면 모든 값을 null로, confidence를 0.0으로.`;
 
   try {

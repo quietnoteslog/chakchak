@@ -269,6 +269,7 @@ export interface RecordInput {
   merchant: string;
   content: string;
   amount: number;
+  currency?: string;
   paymentType: PaymentType;
   paymentCardId: string;
   paymentCardLabel: string;

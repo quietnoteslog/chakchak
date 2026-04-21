@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;padding:0;background:#f5f7fb;font-family:var(--chak-font-sans);color:#333}
+  .card{padding:20px;display:grid;gap:12px}
+  .field{display:grid;gap:6px}
+  .lbl{font-size:13px;font-weight:600;color:#555}
+  input,select,textarea{padding:10px 12px;font-size:14px;border:1px solid #d0d6e2;border-radius:8px;background:#fff;outline:none;font-family:inherit;color:#222}
+  input.inline{padding:8px 10px;font-size:13px;border-radius:6px}
+  .drop{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px;background:#fff;border:2px dashed #c5cfe4;border-radius:12px;color:#7b9fe8;text-align:center;font-size:13px}
+  .drop strong{color:#333;font-weight:700}
+  .drop .hint{font-size:11px;color:#888;margin-top:2px}
+</style></head><body><div class="card">
+  <div class="field"><span class="lbl">프로젝트명 *</span><input placeholder="예) 2026 상반기 워크샵" value="2026 상반기 워크샵"></div>
+  <div class="field"><span class="lbl">구매처 *</span><input class="inline" placeholder="예) 이마트 강남점"></div>
+  <div class="field"><span class="lbl">구분 *</span><select><option>영수증</option><option>세금계산서</option></select></div>
+  <div class="drop">
+    <div style="font-size:28px;margin-bottom:4px">📷</div>
+    <strong>영수증 촬영·선택·드래그</strong>
+    <div class="hint">이미지/PDF, 최대 10MB · OCR 자동 입력</div>
+  </div>
+</div></body></html>

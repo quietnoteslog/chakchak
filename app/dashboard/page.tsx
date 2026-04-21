@@ -32,26 +32,25 @@ export default function DashboardPage() {
       <header
         style={{
           padding: '16px 20px',
-          background: '#fff',
-          borderBottom: '1px solid #e5e9f2',
+          background: 'linear-gradient(135deg, #a8c8f8 0%, #7b9fe8 50%, #8b7fd4 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}
       >
-        <div style={{ fontWeight: 700, fontSize: 18, letterSpacing: '0.05em' }}>착착</div>
+        <div style={{ fontWeight: 700, fontSize: 18, letterSpacing: '0.05em', color: '#fff' }}>착착</div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: '#555' }}>{user.displayName}</span>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)' }}>{user.displayName}</span>
           <button
             onClick={logout}
             style={{
               padding: '6px 12px',
               fontSize: 12,
-              background: '#fff',
-              border: '1px solid #d0d6e2',
+              background: 'rgba(255,255,255,0.2)',
+              border: '1px solid rgba(255,255,255,0.4)',
               borderRadius: 6,
               cursor: 'pointer',
-              color: '#555',
+              color: '#fff',
             }}
           >
             로그아웃
