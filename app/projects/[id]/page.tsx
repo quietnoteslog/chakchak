@@ -492,6 +492,7 @@ export default function ProjectDetailPage() {
                       <div key={r.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e9f2', padding: '14px 16px', boxShadow: '0 1px 4px rgba(100,120,200,0.06)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 11, color: '#aaa', fontVariantNumeric: 'tabular-nums' }}>#{visibleRecords.length - i}</span>
                             <span style={tag}>{r.type}</span>
                             <span style={{ fontSize: 12, color: '#888' }}>{formatDate(r.date)}</span>
                           </div>
@@ -553,7 +554,7 @@ export default function ProjectDetailPage() {
                         const canEdit = r.createdBy === user.uid || isOwner || isEditor;
                         return (
                           <tr key={r.id} style={{ borderTop: '1px solid #eef1f7' }}>
-                            <td style={{ ...tdStyle, color: '#888', textAlign: 'center' }}>{i + 1}</td>
+                            <td style={{ ...tdStyle, color: '#888', textAlign: 'center' }}>{visibleRecords.length - i}</td>
                             <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDate(r.date)}</td>
                             <td style={tdStyle}><span style={tag}>{r.type}</span></td>
                             <td style={{ ...tdStyle, color: '#666' }}>{r.categoryId || '-'}</td>
