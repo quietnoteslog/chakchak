@@ -392,24 +392,24 @@ export async function exportRecordsToPdf(
   tr:nth-child(even) td { background: #F7F9FD; }
   tfoot td { font-weight: 700; background: #E8EFFF; border-top: 2px solid #7B9FE8; padding: 6px 5px; }
 
-  /* 레코드 페이지 (2열) */
-  .rp-page { page-break-before: always; break-before: page; display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; height: calc(297mm - 16mm); max-height: calc(297mm - 16mm); overflow: hidden; padding: 2mm 0; }
-  .rp-card { display: flex; flex-direction: column; height: 100%; max-height: 100%; overflow: hidden; }
+  /* 레코드 페이지 (2열) — iOS print는 overflow:hidden 무시하므로 img에 mm 절대값 직접 지정 */
+  .rp-page { page-break-before: always; break-before: page; display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; padding: 2mm 0; }
+  .rp-card { display: flex; flex-direction: column; page-break-inside: avoid; break-inside: avoid; }
   .rp-empty { visibility: hidden; }
-  .rp-top { padding: 8px 10px; border: 2px solid #7B9FE8; border-radius: 6px; background: #F7F9FD; margin-bottom: 6px; flex-shrink: 0; }
+  .rp-top { padding: 6px 8px; border: 2px solid #7B9FE8; border-radius: 6px; background: #F7F9FD; margin-bottom: 2px; flex-shrink: 0; }
   .rp-topmain { display: flex; align-items: center; gap: 8px; }
   .rp-no { font-size: 16px; font-weight: 800; color: #7B9FE8; line-height: 1; white-space: nowrap; }
   .rp-merchant { font-size: 12px; font-weight: 700; color: #222; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rp-amount { font-size: 13px; font-weight: 800; color: #222; white-space: nowrap; }
-  .rp-details { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #D0D6E2; font-size: 9.5px; }
+  .rp-details { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-top: 4px; padding-top: 4px; border-top: 1px solid #D0D6E2; font-size: 9.5px; }
   .rp-detail { display: flex; gap: 5px; align-items: baseline; overflow: hidden; }
   .rp-detail .k { color: #888; font-weight: 700; min-width: 40px; flex-shrink: 0; }
   .rp-detail .v { color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .rp-image-wrap { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0; max-height: 100%; }
-  .rp-image-wrap img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; border: 1px solid #E5E9F2; }
-  .rp-no-image { padding: 20px; border: 2px dashed #D0D6E2; border-radius: 6px; color: #888; font-size: 12px; }
+  .rp-image-wrap { display: flex; align-items: flex-start; justify-content: center; }
+  .rp-image-wrap img { max-width: 88mm; max-height: 205mm; width: auto; height: auto; display: block; border: 1px solid #E5E9F2; }
+  .rp-no-image { padding: 12px; border: 2px dashed #D0D6E2; border-radius: 6px; color: #888; font-size: 12px; }
 
-  @media print { body { padding: 0; } .rp-page { page-break-before: always; break-before: page; height: calc(297mm - 16mm); max-height: calc(297mm - 16mm); overflow: hidden; } }
+  @media print { body { padding: 0; } .rp-page { page-break-before: always; break-before: page; } .rp-card { page-break-inside: avoid; break-inside: avoid; } .rp-image-wrap img { max-width: 88mm; max-height: 205mm; } }
 </style></head><body>
   ${coverHtml}
   <div class="cover-footer">착착 - ${projectName}</div>
