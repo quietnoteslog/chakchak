@@ -479,7 +479,11 @@ export default function ProjectDetailPage() {
                             <td style={{ ...tdStyle, color: '#666' }}>{r.categoryId2 || '-'}</td>
                             <td style={{ ...tdStyle, fontWeight: 600 }}>{r.merchant}</td>
                             <td style={{ ...tdStyle, color: '#666', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.content}>{r.content || '-'}</td>
-                            <td style={{ ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatMoney(r.amount)}</td>
+                            <td style={{ ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                              {r.currency && r.currency !== 'KRW'
+                                ? <>{r.currency} {r.amount.toLocaleString()}</>
+                                : <>{formatMoney(r.amount)}원</>}
+                            </td>
                             <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                 <span style={{ fontSize: 11 }}>{r.paymentType}</span>
