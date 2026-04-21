@@ -21,6 +21,7 @@ export default function InviteAcceptPage() {
   const [tokenData, setTokenData] = useState<InviteToken | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showInstall, setShowInstall] = useState(false);
 
   useEffect(() => {
     if (loading) return; // 인증 상태 확정까지 대기
@@ -55,7 +56,7 @@ export default function InviteAcceptPage() {
           setProject(p);
           if (p.memberIds.includes(user.uid)) {
             setStatus('alreadyMember');
-            setTimeout(() => router.replace(`/projects/${projectId}`), 800);
+            setShowInstall(true);
             return;
           }
         }
@@ -83,7 +84,8 @@ export default function InviteAcceptPage() {
       const result = await acceptInviteByToken(projectId, token, user.uid, name);
       if (result === 'ok') {
         setStatus('done');
-        setTimeout(() => router.replace(`/projects/${projectId}`), 1200);
+        setShowInstall(true);
+        // 자동 리다이렉트는 제거 — 설치 프롬프트 닫힐 때 이동
       } else if (result === 'revoked') setStatus('revoked');
       else if (result === 'expired') setStatus('expired');
       else setStatus('invalid');
@@ -176,12 +178,26 @@ export default function InviteAcceptPage() {
 
         {status === 'joining' && <p style={{ textAlign: 'center', color: '#7b9fe8' }}>참여 중...</p>}
 
-        {(status === 'done' || status === 'alreadyMember') && (
+        {(status === 'done' || status === 'alreadyMember') && !showInstall && (
           <p style={{ textAlign: 'center', color: '#3a8e5f' }}>
             참여 완료! 프로젝트로 이동합니다...
           </p>
         )}
+
+        {(status === 'done' || status === 'alreadyMember') && showInstall && (
+          <p style={{ textAlign: 'center', color: '#3a8e5f', fontWeight: 600 }}>
+            ✓ 참여 완료
+          </p>
+        )}
       </div>
+
+      <InstallPrompt
+        open={showInstall}
+        onClose={() => {
+          setShowInstall(false);
+          router.replace(`/projects/${projectId}`);
+        }}
+      />
     </div>
   );
 }

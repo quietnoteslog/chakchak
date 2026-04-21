@@ -3,7 +3,7 @@
 import { useState, useEffect, FormEvent, ChangeEvent, DragEvent } from 'react';
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
-import { addRecord, updateRecord, RecordInput } from '@/lib/firestore';
+import { addRecord, updateRecord, RecordInput, addCategory, addCategory2 } from '@/lib/firestore';
 import {
   Project,
   ExpenseRecord,
@@ -38,6 +38,12 @@ export default function RecordForm({ project, currentUid, currentName, existing,
   const [type, setType] = useState<RecordType>(existing?.type ?? '영수증');
   const [categoryId, setCategoryId] = useState<string>(existing?.categoryId ?? ((project.categories ?? [])[0] ?? ''));
   const [categoryId2, setCategoryId2] = useState<string>(existing?.categoryId2 ?? ((project.categories2 ?? [])[0] ?? ''));
+  const [extraCats1, setExtraCats1] = useState<string[]>([]);
+  const [extraCats2, setExtraCats2] = useState<string[]>([]);
+  const [newCat1, setNewCat1] = useState('');
+  const [newCat2, setNewCat2] = useState('');
+  const allCats1 = [...(project.categories ?? []), ...extraCats1];
+  const allCats2 = [...(project.categories2 ?? []), ...extraCats2];
   const [date, setDate] = useState(
     existing ? existing.date.toDate().toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
   );
@@ -262,23 +268,45 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         </Field>
         <Field label="카테고리1 *">
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
-            {(project.categories ?? []).length === 0 ? (
+            {allCats1.length === 0 ? (
               <option value="">(카테고리 없음)</option>
             ) : (
               <>
                 <option value="">선택</option>
-                {(project.categories ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
+                {allCats1.map((c) => <option key={c} value={c}>{c}</option>)}
               </>
             )}
           </select>
+          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+            <input value={newCat1} onChange={(e) => setNewCat1(e.target.value)} placeholder="새 카테고리 추가" style={{ ...inputStyle, flex: 1, padding: '6px 8px', fontSize: 12 }} />
+            <button type="button" onClick={async () => {
+              const v = newCat1.trim();
+              if (!v || allCats1.includes(v)) return;
+              await addCategory(project.id, v);
+              setExtraCats1((p) => [...p, v]);
+              setCategoryId(v);
+              setNewCat1('');
+            }} style={{ padding: '6px 10px', fontSize: 12, background: '#eef4ff', color: '#4a6bc4', border: '1px solid #b5c4e8', borderRadius: 6, cursor: 'pointer' }}>+</button>
+          </div>
         </Field>
       </div>
 
       <Field label="카테고리2">
         <select value={categoryId2} onChange={(e) => setCategoryId2(e.target.value)} style={inputStyle}>
           <option value="">(선택 안 함)</option>
-          {(project.categories2 ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
+          {allCats2.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
+        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+          <input value={newCat2} onChange={(e) => setNewCat2(e.target.value)} placeholder="새 카테고리2 추가" style={{ ...inputStyle, flex: 1, padding: '6px 8px', fontSize: 12 }} />
+          <button type="button" onClick={async () => {
+            const v = newCat2.trim();
+            if (!v || allCats2.includes(v)) return;
+            await addCategory2(project.id, v);
+            setExtraCats2((p) => [...p, v]);
+            setCategoryId2(v);
+            setNewCat2('');
+          }} style={{ padding: '6px 10px', fontSize: 12, background: '#eef4ff', color: '#4a6bc4', border: '1px solid #b5c4e8', borderRadius: 6, cursor: 'pointer' }}>+</button>
+        </div>
       </Field>
 
       <Field label="일자 *">
@@ -373,7 +401,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
           </div>
         </Field>
         <Field label="이용자 (선택)">
-          <input value={userNames} onChange={(e) => setUserNames(e.target.value)} style={inputStyle} placeholder="예) 신유림 외 4명" />
+          <input value={userNames} onChange={(e) => setUserNames(e.target.value)} style={inputStyle} placeholder="예) 홍길동 외 2명" />
         </Field>
       </div>
 
