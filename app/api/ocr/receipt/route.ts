@@ -42,12 +42,19 @@ export async function POST(req: NextRequest) {
     ? '"merchant": string | null,   // 공급자(판매자)의 상호명. 공급받는자(구매자) 아님. 못 읽으면 null'
     : '"merchant": string | null,   // 가맹점(상호)명. 못 읽으면 null';
 
+  const vatField = isTaxInvoice
+    ? `  "vatAmount": number | null,  // 부가가치세 금액(정수). 못 읽으면 null\n`
+    : '';
+  const amountNote = isTaxInvoice
+    ? '"amount": 합계금액(공급가액+부가가치세) 정수. "vatAmount": 부가가치세 정수.'
+    : '"amount": 총 결제 금액 정수.';
+
   const prompt = `이 문서 이미지에서 정보를 추출해 아래 JSON 스키마로만 응답하세요. 설명, 마크다운 블록 없이 순수 JSON만.
 
 {
   ${merchantInstruction}
-  "amount": number | null,     // 총 결제 금액(정수, 통화기호/쉼표 제외). 못 읽으면 null
-  "date": string | null,       // 거래 일자 "YYYY-MM-DD". 못 읽으면 null
+  "amount": number | null,     // ${amountNote} 못 읽으면 null
+${vatField}  "date": string | null,       // 거래 일자 "YYYY-MM-DD". 못 읽으면 null
   "currency": string | null,   // ISO 4217 통화 코드 (예: "KRW", "USD", "JPY", "EUR"). 판단 불가 시 null
   "confidence": number         // 0.0 ~ 1.0 신뢰도 (모든 필드 평균)
 }

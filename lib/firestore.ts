@@ -269,6 +269,7 @@ export interface RecordInput {
   merchant: string;
   content: string;
   amount: number;
+  vatAmount?: number;
   currency?: string;
   paymentType: PaymentType;
   paymentCardId: string;
@@ -292,6 +293,7 @@ export async function addRecord(projectId: string, uid: string, input: RecordInp
     merchant: input.merchant,
     content: input.content,
     amount: input.amount,
+    ...(input.vatAmount != null ? { vatAmount: input.vatAmount } : {}),
     ...(input.currency ? { currency: input.currency } : {}),
     paymentType: input.paymentType,
     paymentCardId: input.paymentCardId,

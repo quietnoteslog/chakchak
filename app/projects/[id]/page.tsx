@@ -496,11 +496,19 @@ export default function ProjectDetailPage() {
                             <span style={tag}>{r.type}</span>
                             <span style={{ fontSize: 12, color: '#888' }}>{formatDate(r.date)}</span>
                           </div>
-                          <span style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                            {r.currency && r.currency !== 'KRW'
-                              ? `${r.currency} ${r.amount.toLocaleString()}`
-                              : `${formatMoney(r.amount)}원`}
-                          </span>
+                          <div style={{ textAlign: 'right' }}>
+                            {r.vatAmount != null ? (
+                              <>
+                                <div style={{ fontSize: 10, color: '#888' }}>공급가 {formatMoney(r.amount - r.vatAmount)}원</div>
+                                <div style={{ fontSize: 10, color: '#888' }}>부가세 {formatMoney(r.vatAmount)}원</div>
+                                <div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>합계 {formatMoney(r.amount)}원</div>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                                {r.currency && r.currency !== 'KRW' ? `${r.currency} ${r.amount.toLocaleString()}` : `${formatMoney(r.amount)}원`}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{r.content || '-'}</div>
                         <div style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>{r.merchant}</div>
@@ -561,10 +569,18 @@ export default function ProjectDetailPage() {
                             <td style={{ ...tdStyle, color: '#666' }}>{r.categoryId2 || '-'}</td>
                             <td style={tdStyle}>{r.merchant}</td>
                             <td style={{ ...tdStyle, color: '#666', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.content}>{r.content || '-'}</td>
-                            <td style={{ ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                              {r.currency && r.currency !== 'KRW'
-                                ? <>{r.currency} {r.amount.toLocaleString()}</>
-                                : <>{formatMoney(r.amount)}원</>}
+                            <td style={{ ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                              {r.vatAmount != null ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                  <span style={{ fontSize: 10, color: '#888' }}>공급 {formatMoney(r.amount - r.vatAmount)}</span>
+                                  <span style={{ fontSize: 10, color: '#888' }}>VAT {formatMoney(r.vatAmount)}</span>
+                                  <span style={{ fontWeight: 700 }}>{formatMoney(r.amount)}원</span>
+                                </div>
+                              ) : r.currency && r.currency !== 'KRW' ? (
+                                <span style={{ fontWeight: 600 }}>{r.currency} {r.amount.toLocaleString()}</span>
+                              ) : (
+                                <span style={{ fontWeight: 600 }}>{formatMoney(r.amount)}원</span>
+                              )}
                             </td>
                             <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

@@ -50,6 +50,12 @@ export default function RecordForm({ project, currentUid, currentName, existing,
   );
   const [merchant, setMerchant] = useState(existing?.merchant ?? '');
   const [content, setContent] = useState(existing?.content ?? '');
+  const isTaxInvoice = type === '세금계산서';
+  // 세금계산서: amount = 합계(공급가액+부가세), vatAmount = 부가세
+  const existingVat = existing?.vatAmount;
+  const existingSupply = existingVat != null ? existing!.amount - existingVat : null;
+  const [supplyAmount, setSupplyAmount] = useState(existingSupply != null ? String(existingSupply) : existing ? String(existing.amount) : '');
+  const [vatAmount, setVatAmount] = useState(existingVat != null ? String(existingVat) : '');
   const [amount, setAmount] = useState(existing ? String(existing.amount) : '');
   const [currency, setCurrency] = useState(existing?.currency ?? 'KRW');
   const [paymentType, setPaymentType] = useState<PaymentType>(existing?.paymentType ?? '법인카드');
@@ -121,7 +127,15 @@ export default function RecordForm({ project, currentUid, currentName, existing,
       if (!res.ok) throw new Error(await res.text());
       const result: OcrResult = await res.json();
       setOcr(result);
-      if (result.amount != null) setAmount(String(result.amount));
+      if (result.amount != null) {
+        setAmount(String(result.amount));
+        if (result.vatAmount != null) {
+          setVatAmount(String(result.vatAmount));
+          setSupplyAmount(String(result.amount - result.vatAmount));
+        } else {
+          setSupplyAmount(String(result.amount));
+        }
+      }
       if (result.date) setDate(result.date);
       if (result.merchant) setMerchant(result.merchant);
       if (result.currency) setCurrency(result.currency);
@@ -137,8 +151,12 @@ export default function RecordForm({ project, currentUid, currentName, existing,
     e.preventDefault();
     if ((project.categories ?? []).length === 0) { setError('카테고리1을 먼저 추가하세요 (프로젝트 상세 > 설정)'); return; }
     if (!categoryId) { setError('카테고리1을 선택하세요'); return; }
-    const amt = Number(amount);
+    const isTax = type === '세금계산서';
+    const supplyAmt = isTax ? Number(supplyAmount) : 0;
+    const vatAmt = isTax ? Number(vatAmount) : 0;
+    const amt = isTax ? supplyAmt + vatAmt : Number(amount);
     if (!Number.isFinite(amt) || amt <= 0) { setError('금액을 올바르게 입력해주세요'); return; }
+    if (isTax && (!Number.isFinite(supplyAmt) || supplyAmt <= 0)) { setError('공급가액을 입력해주세요'); return; }
     if (!merchant.trim()) { setError('구매처를 입력해주세요'); return; }
     if (paymentType === '법인카드' && !paymentCardId) {
       setError('법인카드를 선택하거나 먼저 등록해주세요');
@@ -183,6 +201,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         merchant: merchant.trim(),
         content: content.trim(),
         amount: amt,
+        vatAmount: type === '세금계산서' && vatAmt > 0 ? vatAmt : undefined,
         currency: currency !== 'KRW' ? currency : undefined,
         paymentType,
         paymentCardId: paymentType === '법인카드' ? paymentCardId : '',
@@ -323,19 +342,57 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         </Field>
       </div>
 
-      <Field label="금액 *">
-        <div style={{ display: 'flex', gap: 8 }}>
-          <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={{ ...inputStyle, width: 90, flexShrink: 0 }}>
-            <option value="KRW">KRW ₩</option>
-            <option value="USD">USD $</option>
-            <option value="JPY">JPY ¥</option>
-            <option value="EUR">EUR €</option>
-            <option value="CNY">CNY ¥</option>
-            <option value="GBP">GBP £</option>
-          </select>
-          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="0" inputMode="numeric" />
+      {isTaxInvoice ? (
+        <div style={{ display: 'grid', gap: 8, padding: 12, background: '#f5f7fb', borderRadius: 10, border: '1px solid #e5e9f2' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 2 }}>금액 (세금계산서)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+            <Field label="공급가액 *">
+              <input
+                type="number"
+                value={supplyAmount}
+                onChange={(e) => {
+                  setSupplyAmount(e.target.value);
+                  const s = Number(e.target.value);
+                  if (Number.isFinite(s) && s > 0) setVatAmount(String(Math.round(s * 0.1)));
+                }}
+                style={inputStyle}
+                placeholder="0"
+                inputMode="numeric"
+              />
+            </Field>
+            <Field label="부가세 (VAT)">
+              <input
+                type="number"
+                value={vatAmount}
+                onChange={(e) => setVatAmount(e.target.value)}
+                style={inputStyle}
+                placeholder="자동 계산 (10%)"
+                inputMode="numeric"
+              />
+            </Field>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#eef4ff', borderRadius: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#555' }}>합계</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#4a6bc4' }}>
+              {(Number(supplyAmount || 0) + Number(vatAmount || 0)).toLocaleString('ko-KR')}원
+            </span>
+          </div>
         </div>
-      </Field>
+      ) : (
+        <Field label="금액 *">
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={{ ...inputStyle, width: 90, flexShrink: 0 }}>
+              <option value="KRW">KRW ₩</option>
+              <option value="USD">USD $</option>
+              <option value="JPY">JPY ¥</option>
+              <option value="EUR">EUR €</option>
+              <option value="CNY">CNY ¥</option>
+              <option value="GBP">GBP £</option>
+            </select>
+            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="0" inputMode="numeric" />
+          </div>
+        </Field>
+      )}
 
       <div>
         <div style={labelStyle}>결제수단 *</div>

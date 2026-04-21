@@ -64,7 +64,8 @@ export interface ExpenseRecord {
   categoryId2?: string;      // 카테고리2
   merchant: string;
   content: string;
-  amount: number;
+  amount: number;            // 합계금액 (세금계산서: 공급가액 + 부가세)
+  vatAmount?: number;        // 부가세 (세금계산서 전용)
   currency?: string;         // 통화 코드 (기본 KRW, 해외 영수증 시 USD/JPY 등)
   paymentType: PaymentType;
   paymentCardId: string;
@@ -84,6 +85,7 @@ export interface ExpenseRecord {
 export interface OcrResult {
   merchant: string | null;
   amount: number | null;
+  vatAmount?: number | null; // 부가세 (세금계산서 전용)
   date: string | null;
   currency: string | null;   // 통화 코드 (KRW, USD, JPY 등)
   confidence: number;
