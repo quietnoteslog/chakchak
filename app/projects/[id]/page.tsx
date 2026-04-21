@@ -3,7 +3,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileSpreadsheet, FileText, Archive, X } from 'lucide-react';
+import { ArrowLeft, FileSpreadsheet, FileText, Archive, X, Users, Settings, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import {
   getProject,
@@ -60,6 +60,14 @@ export default function ProjectDetailPage() {
   });
   const [pdfIncludeReceipts, setPdfIncludeReceipts] = useState(true);
   const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -290,13 +298,13 @@ export default function ProjectDetailPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-              <Link href={`/projects/${project.id}/members`} style={btnSecondary}>
-                멤버 ({project.memberIds.length})
+              <Link href={`/projects/${project.id}/members`} style={{ ...btnSecondary, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <Users size={14} />멤버 ({project.memberIds.length})
               </Link>
               {isOwner && (
                 <>
-                  <button onClick={() => setShowSettings(!showSettings)} style={{ ...btnSecondary, cursor: 'pointer' }}>
-                    {showSettings ? '설정 닫기' : '설정'}
+                  <button onClick={() => setShowSettings(!showSettings)} style={{ ...btnSecondary, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <Settings size={14} />{showSettings ? '설정 닫기' : '설정'}
                   </button>
                   <button onClick={onDeleteProject} style={{ ...btnSecondary, color: '#c33', borderColor: '#f0c8c8', cursor: 'pointer' }}>
                     프로젝트 삭제
@@ -474,6 +482,50 @@ export default function ProjectDetailPage() {
                 <p style={{ color: '#888' }}>로딩 중...</p>
               ) : visibleRecords.length === 0 ? (
                 <div style={emptyBox}>아직 내역이 없습니다. 영수증을 추가해보세요.</div>
+              ) : isMobile ? (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {visibleRecords.map((r, i) => {
+                    const isEditor = (project.editorIds ?? []).includes(user.uid);
+                    const canEdit = r.createdBy === user.uid || isOwner || isEditor;
+                    const cats = [r.categoryId, r.categoryId2].filter(Boolean).join(' · ');
+                    return (
+                      <div key={r.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e9f2', padding: '14px 16px', boxShadow: '0 1px 4px rgba(100,120,200,0.06)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={tag}>{r.type}</span>
+                            <span style={{ fontSize: 12, color: '#888' }}>{formatDate(r.date)}</span>
+                          </div>
+                          <span style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                            {r.currency && r.currency !== 'KRW'
+                              ? `${r.currency} ${r.amount.toLocaleString()}`
+                              : `${formatMoney(r.amount)}원`}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', marginBottom: 8 }}>{r.merchant}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 12, color: '#888' }}>{cats || '-'}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            {r.receiptUrl ? (
+                              <a href={r.receiptUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#7b9fe8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                                <ImageIcon size={13} />영수증 보기
+                              </a>
+                            ) : (
+                              <span style={{ fontSize: 12, color: '#e06060', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                                <AlertCircle size={13} />미제출
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {canEdit && (
+                          <div style={{ display: 'flex', gap: 6, marginTop: 10, justifyContent: 'flex-end', borderTop: '1px solid #f0f2f8', paddingTop: 8 }}>
+                            <button type="button" onClick={() => router.push(`/projects/${project.id}/records/${r.id}/edit`)} style={{ ...miniBtn, cursor: 'pointer' }}>수정</button>
+                            <button onClick={() => onDeleteRecord(r)} style={{ ...miniBtn, color: '#c33', borderColor: '#f0c8c8' }}>삭제</button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                 <div style={{ background: '#fff', border: '1px solid #e5e9f2', borderRadius: 8, overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1000 }}>
