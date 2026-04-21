@@ -275,6 +275,10 @@ export async function exportRecordsToPdf(
   records: ExpenseRecord[],
   options: PdfOptions = {}
 ) {
+  // window.open은 반드시 async 작업 전에 호출 (모바일 팝업 차단 방지)
+  const w = window.open('', '_blank');
+  if (!w) throw new Error('팝업 차단을 해제하고 다시 시도해주세요');
+
   const { filterSummary = '', columns = DEFAULT_PDF_COLS, includeReceipts = true } = options;
   const total = records.reduce((s, r) => s + (r.amount ?? 0), 0);
   const projectName = escapeHtml(project.name);
@@ -399,8 +403,6 @@ export async function exportRecordsToPdf(
   </script>
 </body></html>`;
 
-  const w = window.open('', '_blank');
-  if (!w) throw new Error('팝업 차단을 해제하고 다시 시도해주세요');
   w.document.open();
   w.document.write(html);
   w.document.close();

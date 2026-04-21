@@ -355,10 +355,10 @@ export default function ProjectDetailPage() {
 
                 <div style={{ marginTop: 16 }}>
                   <h3 style={settingsTitle}>법인카드</h3>
-                  <form onSubmit={onAddCard} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 6, marginBottom: 8 }}>
+                  <form onSubmit={onAddCard} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr auto', gap: 6, marginBottom: 8 }}>
                     <input value={cardBank} onChange={(e) => setCardBank(e.target.value)} placeholder="카드사 (예: 신한)" style={{ ...inlineInput }} />
                     <input value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} placeholder="카드번호 (예: ****0912)" style={{ ...inlineInput }} />
-                    <button type="submit" style={btnPrimary}>+ 등록</button>
+                    <button type="submit" style={{ ...btnPrimary, textAlign: 'center' }}>+ 등록</button>
                   </form>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {(project.paymentCards ?? []).map((c) => (
@@ -449,7 +449,7 @@ export default function ProjectDetailPage() {
               </section>
             )}
 
-            <div style={summaryBox}>
+            <div style={{ ...summaryBox, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center' }}>
               <div>
                 <div style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>
                   {activeFilterCount > 0 || selectedTab !== ALL_TAB ? '필터 소계' : '전체 지출'}
@@ -461,7 +461,7 @@ export default function ProjectDetailPage() {
                   </div>
                 ))}
               </div>
-              <Link href={`/projects/${project.id}/new-record`} style={btnPrimary}>+ 내역 추가</Link>
+              <Link href={`/projects/${project.id}/new-record`} style={{ ...btnPrimary, textAlign: 'center' }}>+ 내역 추가</Link>
             </div>
 
             <section>
@@ -501,7 +501,8 @@ export default function ProjectDetailPage() {
                               : `${formatMoney(r.amount)}원`}
                           </span>
                         </div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', marginBottom: 8 }}>{r.merchant}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{r.content || '-'}</div>
+                        <div style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>{r.merchant}</div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span style={{ fontSize: 12, color: '#888' }}>{cats || '-'}</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
