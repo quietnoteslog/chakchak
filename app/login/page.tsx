@@ -44,6 +44,16 @@ function LoginPageInner() {
 
   if (loading) return null;
 
+  const openInExternalBrowser = () => {
+    const url = window.location.href;
+    const ua = navigator.userAgent;
+    if (/iPhone|iPad|iPod/i.test(ua)) {
+      window.open(url, '_blank');
+    } else {
+      window.location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;action=android.intent.action.VIEW;package=com.android.chrome;end`;
+    }
+  };
+
   const onGoogle = async () => {
     setError(null);
     setBusy(true);
@@ -101,10 +111,10 @@ function LoginPageInner() {
             Chrome 또는 Safari에서 열어주세요.<br />
             <button
               type="button"
-              onClick={() => { navigator.clipboard?.writeText(window.location.href); alert('주소가 복사됐습니다. Chrome/Safari에 붙여넣기 해주세요.'); }}
+              onClick={openInExternalBrowser}
               style={{ marginTop: 8, padding: '6px 12px', fontSize: 12, background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 6, color: '#fff', cursor: 'pointer' }}
             >
-              URL 복사
+              Chrome / Safari에서 열기
             </button>
           </div>
         )}
