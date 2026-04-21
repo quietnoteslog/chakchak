@@ -292,6 +292,7 @@ export async function addRecord(projectId: string, uid: string, input: RecordInp
     merchant: input.merchant,
     content: input.content,
     amount: input.amount,
+    ...(input.currency ? { currency: input.currency } : {}),
     paymentType: input.paymentType,
     paymentCardId: input.paymentCardId,
     paymentCardLabel: input.paymentCardLabel,
@@ -309,7 +310,10 @@ export async function addRecord(projectId: string, uid: string, input: RecordInp
 }
 
 export async function updateRecord(projectId: string, recordId: string, patch: Partial<RecordInput>) {
-  const data: Record<string, unknown> = { ...patch, updatedAt: serverTimestamp() };
+  const data: Record<string, unknown> = { updatedAt: serverTimestamp() };
+  for (const [k, v] of Object.entries(patch)) {
+    if (v !== undefined) data[k] = v;
+  }
   if (patch.date) data.date = Timestamp.fromDate(patch.date);
   await updateDoc(doc(db, PROJECTS, projectId, 'records', recordId), data);
 }

@@ -2,6 +2,7 @@
 
 import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { createProject } from '@/lib/firestore';
 
@@ -54,7 +55,7 @@ export default function NewProjectPage() {
           onClick={() => router.back()}
           style={{ background: 'none', border: 'none', fontSize: 14, color: '#555', cursor: 'pointer' }}
         >
-          ← 뒤로
+          <ArrowLeft size={16} style={{ marginRight: 4, verticalAlign: 'middle' }} />뒤로
         </button>
       </header>
 

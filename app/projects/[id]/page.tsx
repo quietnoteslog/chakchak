@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, FileSpreadsheet, FileText, Archive, X } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import {
   getProject,
@@ -109,7 +110,10 @@ export default function ProjectDetailPage() {
     }
     return true;
   });
-  const total = visibleRecords.reduce((s, r) => s + (r.amount ?? 0), 0);
+  const total = visibleRecords.filter(r => !r.currency || r.currency === 'KRW').reduce((s, r) => s + (r.amount ?? 0), 0);
+  const foreignTotals = visibleRecords
+    .filter(r => r.currency && r.currency !== 'KRW')
+    .reduce((acc, r) => { acc[r.currency!] = (acc[r.currency!] ?? 0) + r.amount; return acc; }, {} as Record<string, number>);
   const activeFilterCount = [filterType, filterCategory2, filterPayer, filterPaymentType, q].filter(Boolean).length;
   const resetFilters = () => {
     setFilterType(''); setFilterCategory2(''); setFilterPayer(''); setFilterPaymentType(''); setFilterQuery('');
@@ -253,7 +257,7 @@ export default function ProjectDetailPage() {
   return (
     <div className="min-h-screen" style={{ background: '#f5f7fb' }}>
       <header style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #a8c8f8 0%, #7b9fe8 50%, #8b7fd4 100%)' }}>
-        <Link href="/dashboard" style={{ fontSize: 14, color: '#fff', textDecoration: 'none', opacity: 0.9 }}>← 프로젝트 목록</Link>
+        <Link href="/dashboard" style={{ fontSize: 14, color: '#fff', textDecoration: 'none', opacity: 0.9, display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowLeft size={16} />프로젝트 목록</Link>
       </header>
 
       <main style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
@@ -303,7 +307,7 @@ export default function ProjectDetailPage() {
                         <button onClick={() => onMoveCategory(1, i, -1)} disabled={i === 0} style={{ ...chipArrow, opacity: i === 0 ? 0.3 : 1 }} title="위로">↑</button>
                         <button onClick={() => onMoveCategory(1, i, 1)} disabled={i === arr.length - 1} style={{ ...chipArrow, opacity: i === arr.length - 1 ? 0.3 : 1 }} title="아래로">↓</button>
                         {c}
-                        <button onClick={() => onRemoveCategory(c)} style={chipClose}>×</button>
+                        <button onClick={() => onRemoveCategory(c)} style={chipClose}><X size={12} /></button>
                       </span>
                     ))}
                     {(project.categories ?? []).length === 0 && <span style={{ fontSize: 12, color: '#888' }}>추가된 카테고리 없음</span>}
@@ -322,7 +326,7 @@ export default function ProjectDetailPage() {
                         <button onClick={() => onMoveCategory(2, i, -1)} disabled={i === 0} style={{ ...chipArrow, opacity: i === 0 ? 0.3 : 1 }} title="위로">↑</button>
                         <button onClick={() => onMoveCategory(2, i, 1)} disabled={i === arr.length - 1} style={{ ...chipArrow, opacity: i === arr.length - 1 ? 0.3 : 1 }} title="아래로">↓</button>
                         {c}
-                        <button onClick={() => onRemoveCategory2(c)} style={chipClose}>×</button>
+                        <button onClick={() => onRemoveCategory2(c)} style={chipClose}><X size={12} /></button>
                       </span>
                     ))}
                     {(project.categories2 ?? []).length === 0 && <span style={{ fontSize: 12, color: '#888' }}>추가된 카테고리 없음</span>}
@@ -340,7 +344,7 @@ export default function ProjectDetailPage() {
                     {(project.paymentCards ?? []).map((c) => (
                       <span key={c.id} style={chip}>
                         {c.bank && c.number ? `${c.bank} · ${c.number}` : c.label}
-                        <button onClick={() => onRemoveCard(c.id, c.label)} style={chipClose}>×</button>
+                        <button onClick={() => onRemoveCard(c.id, c.label)} style={chipClose}><X size={12} /></button>
                       </span>
                     ))}
                     {(project.paymentCards ?? []).length === 0 && <span style={{ fontSize: 12, color: '#888' }}>등록된 카드 없음</span>}
@@ -415,6 +419,11 @@ export default function ProjectDetailPage() {
                   {activeFilterCount > 0 || selectedTab !== ALL_TAB ? '필터 소계' : '전체 지출'}
                 </div>
                 <div style={{ fontSize: 20, fontWeight: 700 }}>{formatMoney(total)}원</div>
+                {Object.entries(foreignTotals).map(([cur, amt]) => (
+                  <div key={cur} style={{ fontSize: 14, fontWeight: 600, color: '#555', marginTop: 2 }}>
+                    {cur} {amt.toLocaleString()}
+                  </div>
+                ))}
               </div>
               <Link href={`/projects/${project.id}/new-record`} style={btnPrimary}>+ 내역 추가</Link>
             </div>
@@ -424,10 +433,10 @@ export default function ProjectDetailPage() {
                 <h2 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>내역 ({visibleRecords.length})</h2>
                 {visibleRecords.length > 0 && (
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={onExportExcel} style={btnSmall}>📊 엑셀</button>
-                    <button onClick={() => setPdfModalOpen(true)} style={btnSmall}>📄 PDF</button>
-                    <button onClick={onExportZip} disabled={!!zipProgress} style={{ ...btnSmall, color: zipProgress ? '#999' : '#333' }}>
-                      {zipProgress ? `Zip ${zipProgress.done}/${zipProgress.total}` : '📦 Zip'}
+                    <button onClick={onExportExcel} style={{ ...btnSmall, display: 'inline-flex', alignItems: 'center', gap: 4 }}><FileSpreadsheet size={14} />엑셀</button>
+                    <button onClick={() => setPdfModalOpen(true)} style={{ ...btnSmall, display: 'inline-flex', alignItems: 'center', gap: 4 }}><FileText size={14} />PDF</button>
+                    <button onClick={onExportZip} disabled={!!zipProgress} style={{ ...btnSmall, color: zipProgress ? '#999' : '#333', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      {zipProgress ? `Zip ${zipProgress.done}/${zipProgress.total}` : <><Archive size={14} />Zip</>}
                     </button>
                   </div>
                 )}

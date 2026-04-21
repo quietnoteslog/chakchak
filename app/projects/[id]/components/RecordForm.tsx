@@ -104,6 +104,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
     try {
       const isPdf = f.type === 'application/pdf';
       const form = new FormData();
+      form.append('documentType', type);
       if (isPdf) form.append('image', f);
       else {
         const resized = await resizeImageForOcr(f, 1600);

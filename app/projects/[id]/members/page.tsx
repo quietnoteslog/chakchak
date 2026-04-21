@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import {
   getProject,
@@ -137,7 +138,7 @@ export default function MembersPage() {
     <div className="min-h-screen" style={{ background: '#f5f7fb' }}>
       <header style={{ padding: '16px 20px', background: '#fff', borderBottom: '1px solid #e5e9f2' }}>
         <Link href={`/projects/${projectId}`} style={{ fontSize: 14, color: '#555', textDecoration: 'none' }}>
-          ← 프로젝트
+          <ArrowLeft size={16} style={{ marginRight: 4, verticalAlign: 'middle' }} />프로젝트
         </Link>
       </header>
 
