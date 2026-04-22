@@ -25,7 +25,7 @@ interface AuthContextType {
   signUpWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
   sendResetEmail: (email: string) => Promise<void>;
   logout: () => Promise<void>;
-  deleteAccount: (password: string) => Promise<{ ownedProjects: string[] }>;
+  deleteAccount: (password: string, deleteOwnedProjects?: boolean) => Promise<{ ownedProjects: string[] }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -74,12 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
   };
 
-  const deleteAccount = async (password: string): Promise<{ ownedProjects: string[] }> => {
+  const deleteAccount = async (password: string, deleteOwnedProjects = false): Promise<{ ownedProjects: string[] }> => {
     const u = auth.currentUser;
     if (!u || !u.email) throw new Error('로그인 상태가 아닙니다');
     const credential = EmailAuthProvider.credential(u.email, password);
     await reauthenticateWithCredential(u, credential);
-    const result = await deleteUserData(u.uid);
+    const result = await deleteUserData(u.uid, deleteOwnedProjects);
     if (result.ownedProjects.length > 0) return result;
     await deleteUser(u);
     return { ownedProjects: [] };

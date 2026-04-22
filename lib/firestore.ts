@@ -94,10 +94,26 @@ export async function deleteProject(projectId: string) {
   await deleteDoc(doc(db, PROJECTS, projectId));
 }
 
-export async function deleteUserData(uid: string): Promise<{ ownedProjects: string[] }> {
+export async function deleteUserData(
+  uid: string,
+  deleteOwnedProjects = false
+): Promise<{ ownedProjects: string[] }> {
   const allProjects = await listMyProjects(uid);
-  const ownedProjects = allProjects.filter((p) => p.ownerId === uid).map((p) => p.name);
-  if (ownedProjects.length > 0) return { ownedProjects };
+  const owned = allProjects.filter((p) => p.ownerId === uid);
+  const ownedNames = owned.map((p) => p.name);
+
+  if (owned.length > 0 && !deleteOwnedProjects) {
+    return { ownedProjects: ownedNames };
+  }
+
+  // 소유 프로젝트 삭제 (records subcollection 먼저)
+  if (deleteOwnedProjects) {
+    for (const p of owned) {
+      const recSnap = await getDocs(collection(db, PROJECTS, p.id, 'records'));
+      await Promise.all(recSnap.docs.map((d) => deleteDoc(d.ref)));
+      await deleteDoc(doc(db, PROJECTS, p.id));
+    }
+  }
 
   // 멤버로만 참여한 프로젝트에서 제거
   const memberOnly = allProjects.filter((p) => p.ownerId !== uid);
