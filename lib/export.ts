@@ -3,10 +3,14 @@ import JSZip from 'jszip';
 import { ref as storageRef, getBlob } from 'firebase/storage';
 import { storage } from './firebase';
 import { Project, ExpenseRecord } from './types';
+const PDFJS_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs';
+const PDFJS_WORKER_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
+
 async function pdfBlobToDataUrl(blob: Blob, scale = 1.5): Promise<string> {
-  // 동적 import: SSR(Node.js)에서 DOMMatrix 오류 방지
-  const pdfjsLib = await import('pdfjs-dist');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+  // webpackIgnore: CDN에서 런타임 로드 - npm 패키지 불필요, 빌드 타임 완전 분리
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfjsLib = await import(/* webpackIgnore: true */ PDFJS_CDN) as any;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_CDN;
   const arrayBuffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const page = await pdf.getPage(1);
