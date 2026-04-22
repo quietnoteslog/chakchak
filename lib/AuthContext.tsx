@@ -10,9 +10,12 @@ import {
   signInWithEmailAndPassword,
   updateProfile,
   sendPasswordResetEmail,
+  deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
 } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
-import { upsertUserProfile } from './firestore';
+import { upsertUserProfile, deleteUserData } from './firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +25,7 @@ interface AuthContextType {
   signUpWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
   sendResetEmail: (email: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<{ ownedProjects: string[] }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -70,8 +74,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
   };
 
+  const deleteAccount = async (password: string): Promise<{ ownedProjects: string[] }> => {
+    const u = auth.currentUser;
+    if (!u || !u.email) throw new Error('로그인 상태가 아닙니다');
+    const credential = EmailAuthProvider.credential(u.email, password);
+    await reauthenticateWithCredential(u, credential);
+    const result = await deleteUserData(u.uid);
+    if (result.ownedProjects.length > 0) return result;
+    await deleteUser(u);
+    return { ownedProjects: [] };
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, sendResetEmail, logout }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, sendResetEmail, logout, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

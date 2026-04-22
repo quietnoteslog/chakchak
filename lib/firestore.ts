@@ -94,6 +94,21 @@ export async function deleteProject(projectId: string) {
   await deleteDoc(doc(db, PROJECTS, projectId));
 }
 
+export async function deleteUserData(uid: string): Promise<{ ownedProjects: string[] }> {
+  const allProjects = await listMyProjects(uid);
+  const ownedProjects = allProjects.filter((p) => p.ownerId === uid).map((p) => p.name);
+  if (ownedProjects.length > 0) return { ownedProjects };
+
+  // 멤버로만 참여한 프로젝트에서 제거
+  const memberOnly = allProjects.filter((p) => p.ownerId !== uid);
+  await Promise.all(memberOnly.map((p) => removeMember(p.id, uid)));
+
+  // users 문서 삭제
+  await deleteDoc(doc(db, USERS, uid));
+
+  return { ownedProjects: [] };
+}
+
 // --- member management ---
 
 export async function removeMember(projectId: string, uid: string) {

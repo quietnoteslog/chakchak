@@ -8,10 +8,14 @@ import { listMyProjects } from '@/lib/firestore';
 import { Project } from '@/lib/types';
 
 export default function DashboardPage() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, deleteAccount } = useAuth();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingList, setLoadingList] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -24,6 +28,29 @@ export default function DashboardPage() {
       .then(setProjects)
       .finally(() => setLoadingList(false));
   }, [user]);
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) { setDeleteError('비밀번호를 입력하세요'); return; }
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const result = await deleteAccount(deletePassword);
+      if (result.ownedProjects.length > 0) {
+        setDeleteError(`총괄인 프로젝트를 먼저 삭제해주세요:\n${result.ownedProjects.join(', ')}`);
+        setDeleting(false);
+        return;
+      }
+      router.replace('/login');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '';
+      if (msg.includes('wrong-password') || msg.includes('invalid-credential')) {
+        setDeleteError('비밀번호가 올바르지 않습니다');
+      } else {
+        setDeleteError('탈퇴 처리 중 오류가 발생했습니다');
+      }
+      setDeleting(false);
+    }
+  };
 
   if (loading || !user) return null;
 
@@ -39,21 +66,19 @@ export default function DashboardPage() {
         }}
       >
         <div style={{ fontWeight: 700, fontSize: 18, letterSpacing: '0.05em', color: '#fff' }}>착착</div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)' }}>{user.displayName}</span>
           <button
             onClick={logout}
-            style={{
-              padding: '6px 12px',
-              fontSize: 12,
-              background: 'rgba(255,255,255,0.2)',
-              border: '1px solid rgba(255,255,255,0.4)',
-              borderRadius: 6,
-              cursor: 'pointer',
-              color: '#fff',
-            }}
+            style={{ padding: '6px 12px', fontSize: 12, background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 6, cursor: 'pointer', color: '#fff' }}
           >
             로그아웃
+          </button>
+          <button
+            onClick={() => { setShowDeleteModal(true); setDeletePassword(''); setDeleteError(''); }}
+            style={{ padding: '6px 10px', fontSize: 12, background: 'rgba(220,38,38,0.25)', border: '1px solid rgba(220,38,38,0.4)', borderRadius: 6, cursor: 'pointer', color: '#fca5a5' }}
+          >
+            탈퇴
           </button>
         </div>
       </header>
@@ -135,6 +160,44 @@ export default function DashboardPage() {
           </ul>
         )}
       </main>
+      {showDeleteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '28px 24px', maxWidth: 360, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#dc2626' }}>회원 탈퇴</div>
+            <p style={{ fontSize: 13, color: '#555', marginBottom: 16, lineHeight: 1.6 }}>
+              탈퇴하면 참여 중인 프로젝트에서 제거되며, 계정이 영구 삭제됩니다.<br />
+              <strong>총괄인 프로젝트는 먼저 삭제해야 합니다.</strong>
+            </p>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#444', marginBottom: 6 }}>비밀번호 확인</div>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleDeleteAccount()}
+              placeholder="현재 비밀번호"
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #e0e0e0', fontSize: 14, marginBottom: 8, boxSizing: 'border-box' }}
+            />
+            {deleteError && (
+              <p style={{ fontSize: 12, color: '#dc2626', marginBottom: 8, whiteSpace: 'pre-line' }}>{deleteError}</p>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid #e0e0e0', background: '#fff', fontSize: 13, cursor: 'pointer' }}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                style={{ flex: 1, padding: '10px', borderRadius: 8, border: 'none', background: deleting ? '#f87171' : '#dc2626', color: '#fff', fontSize: 13, fontWeight: 600, cursor: deleting ? 'not-allowed' : 'pointer' }}
+              >
+                {deleting ? '처리 중...' : '탈퇴하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
