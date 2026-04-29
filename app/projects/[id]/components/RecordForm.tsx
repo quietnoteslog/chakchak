@@ -58,6 +58,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
   const [vatAmount, setVatAmount] = useState(existingVat != null ? String(existingVat) : '');
   const [amount, setAmount] = useState(existing ? String(existing.amount) : '');
   const [currency, setCurrency] = useState(existing?.currency ?? 'KRW');
+  const [amountKRW, setAmountKRW] = useState(existing?.amountKRW ? String(existing.amountKRW) : '');
   const [paymentType, setPaymentType] = useState<PaymentType>(existing?.paymentType ?? '법인카드');
   const [paymentCardId, setPaymentCardId] = useState<string>(existing?.paymentCardId ?? ((project.paymentCards ?? [])[0]?.id ?? ''));
   const [payerId, setPayerId] = useState<string>(existing?.payerId ?? currentUid);
@@ -203,6 +204,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         amount: amt,
         vatAmount: type === '세금계산서' && vatAmt > 0 ? vatAmt : undefined,
         currency: currency !== 'KRW' ? currency : undefined,
+        amountKRW: currency !== 'KRW' && amountKRW ? Number(amountKRW) : undefined,
         paymentType,
         paymentCardId: paymentType === '법인카드' ? paymentCardId : '',
         paymentCardLabel,
@@ -391,6 +393,12 @@ export default function RecordForm({ project, currentUid, currentName, existing,
             </select>
             <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="0" inputMode="numeric" />
           </div>
+          {currency !== 'KRW' && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+              <div style={{ ...inputStyle, width: 90, flexShrink: 0, display: 'flex', alignItems: 'center', color: '#aaa', fontSize: 12, background: '#f5f7fc' }}>KRW ₩</div>
+              <input type="number" value={amountKRW} onChange={(e) => setAmountKRW(e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="원화 확정액 (카드 청구 후 입력)" inputMode="numeric" />
+            </div>
+          )}
         </Field>
       )}
 

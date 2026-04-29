@@ -302,6 +302,7 @@ export interface RecordInput {
   amount: number;
   vatAmount?: number;
   currency?: string;
+  amountKRW?: number;
   paymentType: PaymentType;
   paymentCardId: string;
   paymentCardLabel: string;
@@ -326,6 +327,7 @@ export async function addRecord(projectId: string, uid: string, input: RecordInp
     amount: input.amount,
     ...(input.vatAmount != null ? { vatAmount: input.vatAmount } : {}),
     ...(input.currency ? { currency: input.currency } : {}),
+    ...(input.amountKRW ? { amountKRW: input.amountKRW } : {}),
     paymentType: input.paymentType,
     paymentCardId: input.paymentCardId,
     paymentCardLabel: input.paymentCardLabel,
@@ -348,6 +350,10 @@ export async function updateRecord(projectId: string, recordId: string, patch: P
     if (v !== undefined) data[k] = v;
   }
   if (patch.date) data.date = Timestamp.fromDate(patch.date);
+  // currency가 undefined(KRW 선택)이면 Firestore 필드 삭제
+  if ('currency' in patch && !patch.currency) data.currency = deleteField();
+  // amountKRW가 undefined이면 Firestore 필드 삭제
+  if ('amountKRW' in patch && !patch.amountKRW) data.amountKRW = deleteField();
   await updateDoc(doc(db, PROJECTS, projectId, 'records', recordId), data);
 }
 

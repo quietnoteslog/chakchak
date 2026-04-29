@@ -100,6 +100,7 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
     { header: '내용', key: 'content', width: 20 },
     { header: '금액', key: 'amount', width: 14 },
     { header: '통화', key: 'currency', width: 8 },
+    { header: '원화확정액', key: 'amountKRW', width: 14 },
     { header: '결제수단', key: 'paymentType', width: 10 },
     { header: '카드', key: 'paymentCardLabel', width: 20 },
     { header: '결제자', key: 'payerName', width: 12 },
@@ -118,6 +119,7 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
       content: r.content || '',
       amount: r.amount,
       currency: r.currency || 'KRW',
+      amountKRW: r.amountKRW ?? '',
       paymentType: r.paymentType || '',
       paymentCardLabel: r.paymentCardLabel || '',
       payerName: r.payerName || r.createdByName || '',
@@ -137,6 +139,7 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
     content: '',
     amount: total,
     currency: '',
+    amountKRW: '',
     paymentType: '',
     paymentCardLabel: '',
     payerName: '합계',
@@ -168,6 +171,7 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
       });
     }
     row.getCell('amount').numFmt = '#,##0';
+    if (row.getCell('amountKRW').value) row.getCell('amountKRW').numFmt = '#,##0';
     row.alignment = { vertical: 'middle' };
   }
 
