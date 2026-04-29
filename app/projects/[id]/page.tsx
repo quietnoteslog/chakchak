@@ -160,6 +160,9 @@ export default function ProjectDetailPage() {
 
   const onExportPdf = async () => {
     if (!project || visibleRecords.length === 0) return;
+    // window.open을 클릭 핸들러 최상단에서 호출해야 모바일 팝업 차단 우회 가능
+    const w = window.open('', '_blank');
+    if (!w) { alert('팝업 차단을 해제하고 다시 시도해주세요'); return; }
     const filterSummary = buildFilterSummary({
       tab: selectedTab === ALL_TAB ? '' : selectedTab,
       type: filterType,
@@ -176,9 +179,11 @@ export default function ProjectDetailPage() {
         filterSummary,
         columns: pdfColumns,
         includeReceipts: pdfIncludeReceipts,
+        w,
       });
       setPdfModalOpen(false);
     } catch (e) {
+      w.close();
       console.error(e);
       alert(e instanceof Error ? e.message : 'PDF 생성 실패');
     } finally {
