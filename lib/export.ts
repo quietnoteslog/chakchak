@@ -317,6 +317,12 @@ export async function exportRecordsToPdf(
   const { filterSummary = '', columns = DEFAULT_PDF_COLS, includeReceipts = true, w: preOpenedWindow } = options;
   const w = preOpenedWindow ?? window.open('', '_blank');
   if (!w) throw new Error('팝업 차단을 해제하고 다시 시도해주세요');
+
+  // 즉시 로딩 화면 표시 (빈 화면 방지)
+  w.document.open();
+  w.document.write('<html><head><meta charset="utf-8"><title>PDF 생성 중...</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#555"><p style="font-size:18px">PDF 생성 중...</p></body></html>');
+  w.document.close();
+
   const total = records.reduce((s, r) => s + (r.amount ?? 0), 0);
   const projectName = escapeHtml(project.name);
   const periodStart = formatFullDate(project.startDate.toDate());
