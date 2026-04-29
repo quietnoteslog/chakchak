@@ -244,7 +244,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
             {dragActive ? '여기에 놓으세요' : '영수증 촬영·선택·드래그 (선택)'}
           </strong>
           <span style={{ fontSize: 11, color: '#888' }}>이미지/PDF, 최대 10MB · OCR 자동 입력</span>
-          <input type="file" accept="image/*,application/pdf" capture="environment" onChange={onFileChange} style={{ display: 'none' }} />
+          <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,application/pdf" onChange={onFileChange} style={{ display: 'none' }} />
         </label>
       )}
 
@@ -266,7 +266,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
             <label style={{ padding: '6px 12px', fontSize: 12, background: '#fff', border: '1px solid #d0d6e2', borderRadius: 6, cursor: 'pointer', color: '#555' }}>
               {existing?.receiptUrl && !file ? '영수증 교체' : '다시 선택'}
-              <input type="file" accept="image/*,application/pdf" capture="environment" onChange={onFileChange} style={{ display: 'none' }} />
+              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,application/pdf" onChange={onFileChange} style={{ display: 'none' }} />
             </label>
           </div>
         </div>
