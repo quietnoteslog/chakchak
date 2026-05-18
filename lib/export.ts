@@ -38,14 +38,13 @@ async function pdfBlobToDataUrl(blob: Blob, scale = 1.5): Promise<string> {
   return dataUrl;
 }
 
-// 전체 페이지를 세로로 합쳐서 1장 이미지로 반환 (세금계산서/견적서용)
-async function pdfAllPagesToDataUrl(blob: Blob, scale = 1.5): Promise<string> {
+// 각 페이지를 별도 이미지 배열로 반환 (세금계산서/견적서용)
+async function pdfPagesToDataUrls(blob: Blob, scale = 2.0): Promise<string[]> {
   const pdfjsLib = await getPdfjs();
   const arrayBuffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const numPages = pdf.numPages;
-
-  const canvases: HTMLCanvasElement[] = [];
+  const dataUrls: string[] = [];
   for (let p = 1; p <= numPages; p++) {
     const page = await pdf.getPage(p);
     const viewport = page.getViewport({ scale });
@@ -53,27 +52,10 @@ async function pdfAllPagesToDataUrl(blob: Blob, scale = 1.5): Promise<string> {
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise;
-    canvases.push(canvas);
+    dataUrls.push(canvas.toDataURL('image/jpeg', 0.9));
   }
   pdf.cleanup();
-
-  if (canvases.length === 1) return canvases[0].toDataURL('image/jpeg', 0.85);
-
-  const totalWidth = Math.max(...canvases.map((c) => c.width));
-  const GAP = 6;
-  const totalHeight = canvases.reduce((s, c) => s + c.height, 0) + GAP * (canvases.length - 1);
-  const combined = document.createElement('canvas');
-  combined.width = totalWidth;
-  combined.height = totalHeight;
-  const ctx = combined.getContext('2d')!;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, totalWidth, totalHeight);
-  let y = 0;
-  for (const c of canvases) {
-    ctx.drawImage(c, 0, y);
-    y += c.height + GAP;
-  }
-  return combined.toDataURL('image/jpeg', 0.85);
+  return dataUrls;
 }
 
 function sanitize(s: string): string {
@@ -452,7 +434,7 @@ export async function exportRecordsToPdf(
   let receiptPagesHtml = '';
   if (includeReceipts) {
     // 영수증 1개당 timeout 적용 + 순차 처리로 hang 방지 + 새 창에 진행률 노출
-    const fetchOne = async (r: ExpenseRecord, i: number): Promise<string | null> => {
+    const fetchOne = async (r: ExpenseRecord, i: number): Promise<string | string[] | null> => {
       if (!r.receiptPath && !r.receiptUrl) return null;
       try {
         const blob = await withTimeout(
@@ -464,8 +446,10 @@ export async function exportRecordsToPdf(
           || r.receiptPath?.toLowerCase().endsWith('.pdf')
           || r.receiptUrl?.toLowerCase().includes('.pdf');
         if (isPdf) {
-          const fn = FULL_PAGE_TYPES.has(r.type) ? pdfAllPagesToDataUrl : pdfBlobToDataUrl;
-          return await withTimeout(fn(blob), 120000, `영수증 ${i + 1} PDF 변환`);
+          if (FULL_PAGE_TYPES.has(r.type)) {
+            return await withTimeout(pdfPagesToDataUrls(blob), 120000, `영수증 ${i + 1} PDF 변환`);
+          }
+          return await withTimeout(pdfBlobToDataUrl(blob), 120000, `영수증 ${i + 1} PDF 변환`);
         }
         return await blobToDataUrl(blob);
       } catch (e) {
@@ -474,7 +458,7 @@ export async function exportRecordsToPdf(
       }
     };
 
-    const imageMap: Record<number, string | null> = {};
+    const imageMap: Record<number, string | string[] | null> = {};
     for (let i = 0; i < records.length; i++) {
       updatePdfProgress(w, `영수증 처리 중 ${i + 1} / ${records.length}`);
       imageMap[i] = await fetchOne(records[i], i);
@@ -484,7 +468,19 @@ export async function exportRecordsToPdf(
     const pages: string[] = [];
     for (let i = 0; i < records.length; i++) {
       const isFullPage = FULL_PAGE_TYPES.has(records[i].type);
-      pages.push(`<div class="rp-page rp-page-single">${renderRecordCard(records[i], i, imageMap[i], columns, activeCols, isFullPage)}</div>`);
+      const imgData = imageMap[i];
+      if (Array.isArray(imgData)) {
+        // 첫 페이지: 레코드 헤더 + 이미지, 이후 페이지: 이미지만
+        imgData.forEach((url, pi) => {
+          if (pi === 0) {
+            pages.push(`<div class="rp-page rp-page-single">${renderRecordCard(records[i], i, url, columns, activeCols, true)}</div>`);
+          } else {
+            pages.push(`<div class="rp-page rp-page-single"><article class="rp-card rp-card-full"><div class="rp-image-wrap rp-image-wrap-full"><img src="${url}" alt="p${pi + 1}" /></div></article></div>`);
+          }
+        });
+      } else {
+        pages.push(`<div class="rp-page rp-page-single">${renderRecordCard(records[i], i, imgData, columns, activeCols, isFullPage)}</div>`);
+      }
     }
     receiptPagesHtml = pages.join('');
   }
