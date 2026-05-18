@@ -80,10 +80,28 @@ async function fetchReceiptBlob(receiptPath: string, fallbackUrl: string): Promi
   } catch (e) {
     // 경로 없으면 URL로 fallback 시도
     console.warn('getBlob failed, fallback to fetch', e);
+    if (!fallbackUrl) throw new Error('fallback URL 없음');
     const res = await fetch(fallbackUrl);
     if (!res.ok) throw new Error(`fetch ${res.status}`);
     return await res.blob();
   }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} 타임아웃 (${ms / 1000}s)`)), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
+function updatePdfProgress(w: Window, msg: string) {
+  try {
+    const el = w.document.getElementById('pdfProgress');
+    if (el) el.textContent = msg;
+  } catch { /* 새 창 닫힘 등 */ }
 }
 
 export async function exportRecordsToExcel(project: Project, records: ExpenseRecord[]) {
@@ -322,9 +340,9 @@ export async function exportRecordsToPdf(
   const w = preOpenedWindow ?? window.open('', '_blank');
   if (!w) throw new Error('팝업 차단을 해제하고 다시 시도해주세요');
 
-  // 즉시 로딩 화면 표시 (빈 화면 방지)
+  // 즉시 로딩 화면 표시 (빈 화면 방지) + 진행률 노출 영역
   w.document.open();
-  w.document.write('<html><head><meta charset="utf-8"><title>PDF 생성 중...</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#555"><p style="font-size:18px">PDF 생성 중...</p></body></html>');
+  w.document.write('<html><head><meta charset="utf-8"><title>PDF 생성 중...</title></head><body style="font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;color:#555;gap:10px"><p style="font-size:18px">PDF 생성 중...</p><p id="pdfProgress" style="font-size:13px;color:#888;margin:0">준비 중</p></body></html>');
   w.document.close();
 
   const total = records.reduce((s, r) => s + (r.amount ?? 0), 0);
@@ -377,19 +395,31 @@ export async function exportRecordsToPdf(
   // 영수증 페이지 (포함 시)
   let receiptPagesHtml = '';
   if (includeReceipts) {
+    // 영수증 1개당 timeout 적용 + 순차 처리로 hang 방지 + 새 창에 진행률 노출
     const fetchOne = async (r: ExpenseRecord, i: number): Promise<string | null> => {
       if (!r.receiptPath && !r.receiptUrl) return null;
       try {
-        const blob = await fetchReceiptBlob(r.receiptPath, r.receiptUrl);
-        if (blob.type === 'application/pdf') return await pdfBlobToDataUrl(blob);
+        const blob = await withTimeout(
+          fetchReceiptBlob(r.receiptPath, r.receiptUrl),
+          15000,
+          `영수증 ${i + 1} 다운로드`,
+        );
+        if (blob.type === 'application/pdf') {
+          return await withTimeout(pdfBlobToDataUrl(blob), 15000, `영수증 ${i + 1} PDF 변환`);
+        }
         return await blobToDataUrl(blob);
       } catch (e) {
         console.warn('receipt fetch failed', r.id, e);
         return null;
       }
     };
-    const imageArr = await Promise.all(records.map((r, i) => fetchOne(r, i)));
-    const imageMap: Record<number, string | null> = Object.fromEntries(imageArr.map((v, i) => [i, v]));
+
+    const imageMap: Record<number, string | null> = {};
+    for (let i = 0; i < records.length; i++) {
+      updatePdfProgress(w, `영수증 처리 중 ${i + 1} / ${records.length}`);
+      imageMap[i] = await fetchOne(records[i], i);
+    }
+    updatePdfProgress(w, '레이아웃 조립 중...');
 
     const pages: string[] = [];
     for (let i = 0; i < records.length; i += 2) {
