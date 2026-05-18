@@ -4,19 +4,34 @@ import { ref as storageRef, getBlob } from 'firebase/storage';
 import { storage } from './firebase';
 import { Project, ExpenseRecord } from './types';
 const PDFJS_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs';
-const PDFJS_WORKER_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
+// ESM(.mjs)은 classic Worker에서 실행 불가 → UMD(.js) 사용
+const PDFJS_WORKER_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.js';
+
+// 세션 내 1회만 fetch/초기화
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _pdfjs: any = null;
+let _workerUrl: string | null = null;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getPdfjs(): Promise<any> {
+  if (!_pdfjs) {
+    // webpackIgnore: CDN에서 런타임 로드 - 빌드 타임 완전 분리
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    _pdfjs = await import(/* webpackIgnore: true */ PDFJS_CDN) as any;
+  }
+  if (!_workerUrl) {
+    // worker 파일 내용을 직접 fetch → same-origin blob URL (cross-origin Worker 차단 방지)
+    const resp = await fetch(PDFJS_WORKER_CDN);
+    if (!resp.ok) throw new Error(`pdfjs worker fetch failed: ${resp.status}`);
+    const bytes = await resp.arrayBuffer();
+    _workerUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/javascript' }));
+    _pdfjs.GlobalWorkerOptions.workerSrc = _workerUrl;
+  }
+  return _pdfjs;
+}
 
 async function pdfBlobToDataUrl(blob: Blob, scale = 1.5): Promise<string> {
-  // webpackIgnore: CDN에서 런타임 로드 - npm 패키지 불필요, 빌드 타임 완전 분리
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfjsLib = await import(/* webpackIgnore: true */ PDFJS_CDN) as any;
-  // cross-origin Worker 로드 차단 우회: CDN 워커를 blob URL로 래핑
-  const workerBlob = new Blob(
-    [`importScripts('${PDFJS_WORKER_CDN}')`],
-    { type: 'text/javascript' },
-  );
-  const workerUrl = URL.createObjectURL(workerBlob);
-  pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+  const pdfjsLib = await getPdfjs();
   const arrayBuffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const page = await pdf.getPage(1);
@@ -26,7 +41,6 @@ async function pdfBlobToDataUrl(blob: Blob, scale = 1.5): Promise<string> {
   canvas.height = viewport.height;
   const ctx = canvas.getContext('2d')!;
   await page.render({ canvasContext: ctx, viewport }).promise;
-  URL.revokeObjectURL(workerUrl);
   return canvas.toDataURL('image/jpeg', 0.85);
 }
 
@@ -411,12 +425,15 @@ export async function exportRecordsToPdf(
           15000,
           `영수증 ${i + 1} 다운로드`,
         );
-        if (blob.type === 'application/pdf') {
-          return await withTimeout(pdfBlobToDataUrl(blob), 15000, `영수증 ${i + 1} PDF 변환`);
+        const isPdf = blob.type === 'application/pdf'
+          || r.receiptPath?.toLowerCase().endsWith('.pdf')
+          || r.receiptUrl?.toLowerCase().includes('.pdf');
+        if (isPdf) {
+          return await withTimeout(pdfBlobToDataUrl(blob), 30000, `영수증 ${i + 1} PDF 변환`);
         }
         return await blobToDataUrl(blob);
       } catch (e) {
-        console.warn('receipt fetch failed', r.id, e);
+        console.warn('receipt fetch/convert failed', r.id, e);
         return null;
       }
     };
