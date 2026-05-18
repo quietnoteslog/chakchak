@@ -4,29 +4,31 @@ import { ref as storageRef, getBlob } from 'firebase/storage';
 import { storage } from './firebase';
 import { Project, ExpenseRecord } from './types';
 const PDFJS_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs';
-// ESM(.mjs)은 classic Worker에서 실행 불가 → UMD(.js) 사용
-const PDFJS_WORKER_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.js';
+const PDFJS_WORKER_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
 
-// 세션 내 1회만 fetch/초기화
+// 세션 내 1회 초기화
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _pdfjs: any = null;
-let _workerUrl: string | null = null;
+let _pdfjsReady = false;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getPdfjs(): Promise<any> {
-  if (!_pdfjs) {
-    // webpackIgnore: CDN에서 런타임 로드 - 빌드 타임 완전 분리
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    _pdfjs = await import(/* webpackIgnore: true */ PDFJS_CDN) as any;
-  }
-  if (!_workerUrl) {
-    // worker 파일 내용을 직접 fetch → same-origin blob URL (cross-origin Worker 차단 방지)
-    const resp = await fetch(PDFJS_WORKER_CDN);
-    if (!resp.ok) throw new Error(`pdfjs worker fetch failed: ${resp.status}`);
-    const bytes = await resp.arrayBuffer();
-    _workerUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/javascript' }));
-    _pdfjs.GlobalWorkerOptions.workerSrc = _workerUrl;
-  }
+  if (_pdfjsReady) return _pdfjs;
+  // webpackIgnore: CDN에서 런타임 로드 - 빌드 타임 완전 분리
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _pdfjs = await import(/* webpackIgnore: true */ PDFJS_CDN) as any;
+  // pdfjs v4는 ESM 워커만 제공 → classic Worker로 로드 불가.
+  // blob URL module worker로 감싸서 same-origin에서 ESM import 수행.
+  const workerBlob = new Blob(
+    [`import '${PDFJS_WORKER_CDN}';`],
+    { type: 'text/javascript' },
+  );
+  const blobUrl = URL.createObjectURL(workerBlob);
+  const worker = new Worker(blobUrl, { type: 'module' });
+  URL.revokeObjectURL(blobUrl);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _pdfjs.GlobalWorkerOptions.workerPort = worker as any;
+  _pdfjsReady = true;
   return _pdfjs;
 }
 
