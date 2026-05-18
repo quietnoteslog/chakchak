@@ -12,11 +12,11 @@ let _pdfjsReady = false;
 async function getPdfjs(): Promise<any> {
   if (_pdfjsReady) return _pdfjs;
   _pdfjs = await import('pdfjs-dist');
-  // 로컬 wrapper 파일을 Worker entry로 사용 → webpack이 IIFE 번들로 출력 보장
-  // node_modules .mjs를 직접 참조하면 webpack이 ESM output 낼 수 있어서 classic Worker 실패
+  // module worker로 생성해서 ESM import 지원, workerPort로 직접 전달
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _pdfjs.GlobalWorkerOptions.workerPort = new Worker(
     new URL('./pdf-worker-entry', import.meta.url),
+    { type: 'module' },
   ) as any;
   _pdfjsReady = true;
   return _pdfjs;
