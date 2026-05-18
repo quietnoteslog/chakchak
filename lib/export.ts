@@ -3,10 +3,7 @@ import JSZip from 'jszip';
 import { ref as storageRef, getBlob } from 'firebase/storage';
 import { storage } from './firebase';
 import { Project, ExpenseRecord } from './types';
-const PDFJS_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs';
-const PDFJS_WORKER_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
 
-// 세션 내 1회 초기화
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _pdfjs: any = null;
 let _pdfjsReady = false;
@@ -14,20 +11,12 @@ let _pdfjsReady = false;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getPdfjs(): Promise<any> {
   if (_pdfjsReady) return _pdfjs;
-  // webpackIgnore: CDN에서 런타임 로드 - 빌드 타임 완전 분리
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _pdfjs = await import(/* webpackIgnore: true */ PDFJS_CDN) as any;
-  // pdfjs v4는 ESM 워커만 제공 → classic Worker로 로드 불가.
-  // blob URL module worker로 감싸서 same-origin에서 ESM import 수행.
-  const workerBlob = new Blob(
-    [`import '${PDFJS_WORKER_CDN}';`],
-    { type: 'text/javascript' },
-  );
-  const blobUrl = URL.createObjectURL(workerBlob);
-  const worker = new Worker(blobUrl, { type: 'module' });
-  URL.revokeObjectURL(blobUrl);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _pdfjs.GlobalWorkerOptions.workerPort = worker as any;
+  _pdfjs = await import('pdfjs-dist');
+  // webpack이 new URL()을 인식해 pdf.worker.min.mjs를 same-origin 번들로 출력
+  _pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url,
+  ).toString();
   _pdfjsReady = true;
   return _pdfjs;
 }
