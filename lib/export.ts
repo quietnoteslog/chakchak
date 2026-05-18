@@ -12,11 +12,12 @@ let _pdfjsReady = false;
 async function getPdfjs(): Promise<any> {
   if (_pdfjsReady) return _pdfjs;
   _pdfjs = await import('pdfjs-dist');
-  // webpack이 new URL()을 인식해 pdf.worker.min.mjs를 same-origin 번들로 출력
-  _pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url,
-  ).toString();
+  // new Worker(new URL(...)) 패턴으로 webpack이 Worker entry로 인식 → IIFE 번들 출력
+  // workerSrc에 URL 문자열을 넣으면 Asset Module(원본 ESM 파일)이 되어 classic Worker 로드 실패
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _pdfjs.GlobalWorkerOptions.workerPort = new Worker(
+    new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url),
+  ) as any;
   _pdfjsReady = true;
   return _pdfjs;
 }
