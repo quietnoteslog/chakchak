@@ -12,12 +12,12 @@ let _pdfjsReady = false;
 async function getPdfjs(): Promise<any> {
   if (_pdfjsReady) return _pdfjs;
   _pdfjs = await import('pdfjs-dist');
-  // module worker로 생성해서 ESM import 지원, workerPort로 직접 전달
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _pdfjs.GlobalWorkerOptions.workerPort = new Worker(
-    new URL('./pdf-worker-entry', import.meta.url),
-    { type: 'module' },
-  ) as any;
+  // workerSrc 설정: worker 로드 실패 시 pdfjs가 fake worker(메인 스레드)로 폴백
+  // workerPort를 쓰면 폴백 없이 무한 대기 → timeout
+  _pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url,
+  ).toString();
   _pdfjsReady = true;
   return _pdfjs;
 }
@@ -423,7 +423,7 @@ export async function exportRecordsToPdf(
           || r.receiptPath?.toLowerCase().endsWith('.pdf')
           || r.receiptUrl?.toLowerCase().includes('.pdf');
         if (isPdf) {
-          return await withTimeout(pdfBlobToDataUrl(blob), 60000, `영수증 ${i + 1} PDF 변환`);
+          return await withTimeout(pdfBlobToDataUrl(blob), 120000, `영수증 ${i + 1} PDF 변환`);
         }
         return await blobToDataUrl(blob);
       } catch (e) {
