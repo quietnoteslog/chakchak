@@ -10,7 +10,13 @@ async function pdfBlobToDataUrl(blob: Blob, scale = 1.5): Promise<string> {
   // webpackIgnore: CDN에서 런타임 로드 - npm 패키지 불필요, 빌드 타임 완전 분리
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfjsLib = await import(/* webpackIgnore: true */ PDFJS_CDN) as any;
-  pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_CDN;
+  // cross-origin Worker 로드 차단 우회: CDN 워커를 blob URL로 래핑
+  const workerBlob = new Blob(
+    [`importScripts('${PDFJS_WORKER_CDN}')`],
+    { type: 'text/javascript' },
+  );
+  const workerUrl = URL.createObjectURL(workerBlob);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
   const arrayBuffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const page = await pdf.getPage(1);
@@ -20,6 +26,7 @@ async function pdfBlobToDataUrl(blob: Blob, scale = 1.5): Promise<string> {
   canvas.height = viewport.height;
   const ctx = canvas.getContext('2d')!;
   await page.render({ canvasContext: ctx, viewport }).promise;
+  URL.revokeObjectURL(workerUrl);
   return canvas.toDataURL('image/jpeg', 0.85);
 }
 
