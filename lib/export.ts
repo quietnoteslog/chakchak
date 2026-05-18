@@ -318,7 +318,9 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-function renderRecordCard(r: ExpenseRecord, index: number, imgDataUrl: string | null, columns: Record<string, boolean>, activeCols: typeof COL_DEFS): string {
+const FULL_PAGE_TYPES = new Set(['세금계산서', '견적서']);
+
+function renderRecordCard(r: ExpenseRecord, index: number, imgDataUrl: string | null, columns: Record<string, boolean>, activeCols: typeof COL_DEFS, fullPage = false): string {
   const no = String(index + 1).padStart(3, '0');
   const HEADER_KEYS = new Set(['no', 'merchant', 'amount']);
   const detailCols = activeCols.filter((c) => !HEADER_KEYS.has(c.key));
@@ -329,6 +331,7 @@ function renderRecordCard(r: ExpenseRecord, index: number, imgDataUrl: string | 
     const v = cellValue(r, c.key, index);
     return `<div class="rp-detail"><span class="k">${c.label}</span><span class="v">${v}</span></div>`;
   }).join('');
+  const imageWrapClass = fullPage ? 'rp-image-wrap rp-image-wrap-full' : 'rp-image-wrap';
   const imageHtml = imgDataUrl
     ? `<img src="${imgDataUrl}" alt="receipt ${no}" />`
     : `<div class="rp-no-image">영수증 없음</div>`;
@@ -342,7 +345,7 @@ function renderRecordCard(r: ExpenseRecord, index: number, imgDataUrl: string | 
         </div>
         ${detailCols.length > 0 ? `<div class="rp-details">${detailHtml}</div>` : ''}
       </div>
-      <div class="rp-image-wrap">${imageHtml}</div>
+      <div class="${imageWrapClass}">${imageHtml}</div>
     </article>`;
 }
 
@@ -440,12 +443,24 @@ export async function exportRecordsToPdf(
     updatePdfProgress(w, '레이아웃 조립 중...');
 
     const pages: string[] = [];
-    for (let i = 0; i < records.length; i += 2) {
-      const first = renderRecordCard(records[i], i, imageMap[i], columns, activeCols);
-      const second = records[i + 1]
-        ? renderRecordCard(records[i + 1], i + 1, imageMap[i + 1], columns, activeCols)
-        : '<article class="rp-card rp-empty"></article>';
-      pages.push(`<div class="rp-page">${first}${second}</div>`);
+    let i = 0;
+    while (i < records.length) {
+      if (FULL_PAGE_TYPES.has(records[i].type)) {
+        // 세금계산서/견적서: 1열 전체 페이지
+        pages.push(`<div class="rp-page rp-page-single">${renderRecordCard(records[i], i, imageMap[i], columns, activeCols, true)}</div>`);
+        i++;
+      } else {
+        // 일반: 2열
+        const first = renderRecordCard(records[i], i, imageMap[i], columns, activeCols, false);
+        let second = '<article class="rp-card rp-empty"></article>';
+        if (i + 1 < records.length && !FULL_PAGE_TYPES.has(records[i + 1].type)) {
+          second = renderRecordCard(records[i + 1], i + 1, imageMap[i + 1], columns, activeCols, false);
+          i += 2;
+        } else {
+          i++;
+        }
+        pages.push(`<div class="rp-page">${first}${second}</div>`);
+      }
     }
     receiptPagesHtml = pages.join('');
   }
@@ -486,9 +501,11 @@ export async function exportRecordsToPdf(
   .rp-detail .v { color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rp-image-wrap { display: flex; align-items: flex-start; justify-content: center; }
   .rp-image-wrap img { max-width: 88mm; max-height: 205mm; width: auto; height: auto; display: block; border: 1px solid #E5E9F2; }
+  .rp-image-wrap-full img { max-width: 180mm; max-height: 260mm; width: 100%; }
+  .rp-page-single { grid-template-columns: 1fr; }
   .rp-no-image { padding: 12px; border: 2px dashed #D0D6E2; border-radius: 6px; color: #888; font-size: 12px; }
 
-  @media print { body { padding: 0; } .rp-page { page-break-before: always; break-before: page; } .rp-card { page-break-inside: avoid; break-inside: avoid; } .rp-image-wrap img { max-width: 88mm; max-height: 205mm; } }
+  @media print { body { padding: 0; } .rp-page { page-break-before: always; break-before: page; } .rp-card { page-break-inside: avoid; break-inside: avoid; } .rp-image-wrap img { max-width: 88mm; max-height: 205mm; } .rp-image-wrap-full img { max-width: 180mm; max-height: 260mm; } }
 </style></head><body>
   ${coverHtml}
   <div class="cover-footer">착착 - ${projectName}</div>
