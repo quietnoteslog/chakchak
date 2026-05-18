@@ -443,24 +443,9 @@ export async function exportRecordsToPdf(
     updatePdfProgress(w, '레이아웃 조립 중...');
 
     const pages: string[] = [];
-    let i = 0;
-    while (i < records.length) {
-      if (FULL_PAGE_TYPES.has(records[i].type)) {
-        // 세금계산서/견적서: 1열 전체 페이지
-        pages.push(`<div class="rp-page rp-page-single">${renderRecordCard(records[i], i, imageMap[i], columns, activeCols, true)}</div>`);
-        i++;
-      } else {
-        // 일반: 2열
-        const first = renderRecordCard(records[i], i, imageMap[i], columns, activeCols, false);
-        let second = '<article class="rp-card rp-empty"></article>';
-        if (i + 1 < records.length && !FULL_PAGE_TYPES.has(records[i + 1].type)) {
-          second = renderRecordCard(records[i + 1], i + 1, imageMap[i + 1], columns, activeCols, false);
-          i += 2;
-        } else {
-          i++;
-        }
-        pages.push(`<div class="rp-page">${first}${second}</div>`);
-      }
+    for (let i = 0; i < records.length; i++) {
+      const isFullPage = FULL_PAGE_TYPES.has(records[i].type);
+      pages.push(`<div class="rp-page rp-page-single">${renderRecordCard(records[i], i, imageMap[i], columns, activeCols, isFullPage)}</div>`);
     }
     receiptPagesHtml = pages.join('');
   }
