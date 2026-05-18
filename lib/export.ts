@@ -25,18 +25,16 @@ async function pdfBlobToDataUrl(blob: Blob, scale = 1.5): Promise<string> {
   const pdfjsLib = await getPdfjs();
   const arrayBuffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  try {
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const ctx = canvas.getContext('2d')!;
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    return canvas.toDataURL('image/jpeg', 0.85);
-  } finally {
-    pdf.destroy();
-  }
+  const page = await pdf.getPage(1);
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  const ctx = canvas.getContext('2d')!;
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  pdf.cleanup();
+  return dataUrl;
 }
 
 function sanitize(s: string): string {
@@ -424,7 +422,7 @@ export async function exportRecordsToPdf(
           || r.receiptPath?.toLowerCase().endsWith('.pdf')
           || r.receiptUrl?.toLowerCase().includes('.pdf');
         if (isPdf) {
-          return await withTimeout(pdfBlobToDataUrl(blob), 30000, `영수증 ${i + 1} PDF 변환`);
+          return await withTimeout(pdfBlobToDataUrl(blob), 60000, `영수증 ${i + 1} PDF 변환`);
         }
         return await blobToDataUrl(blob);
       } catch (e) {
