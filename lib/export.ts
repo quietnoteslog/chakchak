@@ -38,6 +38,44 @@ async function pdfBlobToDataUrl(blob: Blob, scale = 1.5): Promise<string> {
   return dataUrl;
 }
 
+// 전체 페이지를 세로로 합쳐서 1장 이미지로 반환 (세금계산서/견적서용)
+async function pdfAllPagesToDataUrl(blob: Blob, scale = 1.5): Promise<string> {
+  const pdfjsLib = await getPdfjs();
+  const arrayBuffer = await blob.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const numPages = pdf.numPages;
+
+  const canvases: HTMLCanvasElement[] = [];
+  for (let p = 1; p <= numPages; p++) {
+    const page = await pdf.getPage(p);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise;
+    canvases.push(canvas);
+  }
+  pdf.cleanup();
+
+  if (canvases.length === 1) return canvases[0].toDataURL('image/jpeg', 0.85);
+
+  const totalWidth = Math.max(...canvases.map((c) => c.width));
+  const GAP = 6;
+  const totalHeight = canvases.reduce((s, c) => s + c.height, 0) + GAP * (canvases.length - 1);
+  const combined = document.createElement('canvas');
+  combined.width = totalWidth;
+  combined.height = totalHeight;
+  const ctx = combined.getContext('2d')!;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, totalWidth, totalHeight);
+  let y = 0;
+  for (const c of canvases) {
+    ctx.drawImage(c, 0, y);
+    y += c.height + GAP;
+  }
+  return combined.toDataURL('image/jpeg', 0.85);
+}
+
 function sanitize(s: string): string {
   return s.replace(/[\\/:*?"<>|\n\r\t]/g, '').trim().slice(0, 60);
 }
@@ -336,7 +374,7 @@ function renderRecordCard(r: ExpenseRecord, index: number, imgDataUrl: string | 
     ? `<img src="${imgDataUrl}" alt="receipt ${no}" />`
     : `<div class="rp-no-image">영수증 없음</div>`;
   return `
-    <article class="rp-card">
+    <article class="rp-card${fullPage ? ' rp-card-full' : ''}">
       <div class="rp-top">
         <div class="rp-topmain">
           ${showNo ? `<div class="rp-no">#${no}</div>` : ''}
@@ -426,7 +464,8 @@ export async function exportRecordsToPdf(
           || r.receiptPath?.toLowerCase().endsWith('.pdf')
           || r.receiptUrl?.toLowerCase().includes('.pdf');
         if (isPdf) {
-          return await withTimeout(pdfBlobToDataUrl(blob), 120000, `영수증 ${i + 1} PDF 변환`);
+          const fn = FULL_PAGE_TYPES.has(r.type) ? pdfAllPagesToDataUrl : pdfBlobToDataUrl;
+          return await withTimeout(fn(blob), 120000, `영수증 ${i + 1} PDF 변환`);
         }
         return await blobToDataUrl(blob);
       } catch (e) {
@@ -486,11 +525,12 @@ export async function exportRecordsToPdf(
   .rp-detail .v { color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rp-image-wrap { display: flex; align-items: flex-start; justify-content: center; }
   .rp-image-wrap img { max-width: 88mm; max-height: 205mm; width: auto; height: auto; display: block; border: 1px solid #E5E9F2; }
-  .rp-image-wrap-full img { max-width: 180mm; max-height: 260mm; width: 100%; }
+  .rp-image-wrap-full img { max-width: 180mm; width: 100%; height: auto; }
   .rp-page-single { grid-template-columns: 1fr; }
+  .rp-card-full { page-break-inside: auto; break-inside: auto; }
   .rp-no-image { padding: 12px; border: 2px dashed #D0D6E2; border-radius: 6px; color: #888; font-size: 12px; }
 
-  @media print { body { padding: 0; } .rp-page { page-break-before: always; break-before: page; } .rp-card { page-break-inside: avoid; break-inside: avoid; } .rp-image-wrap img { max-width: 88mm; max-height: 205mm; } .rp-image-wrap-full img { max-width: 180mm; max-height: 260mm; } }
+  @media print { body { padding: 0; } .rp-page { page-break-before: always; break-before: page; } .rp-card { page-break-inside: avoid; break-inside: avoid; } .rp-card-full { page-break-inside: auto; break-inside: auto; } .rp-image-wrap img { max-width: 88mm; max-height: 205mm; } .rp-image-wrap-full img { max-width: 180mm; } }
 </style></head><body>
   ${coverHtml}
   <div class="cover-footer">착착 - ${projectName}</div>
