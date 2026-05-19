@@ -34,6 +34,8 @@ async function pdfBlobToDataUrl(blob: Blob, scale = 4.0): Promise<string> {
   const ctx = canvas.getContext('2d')!;
   await page.render({ canvasContext: ctx, viewport }).promise;
   const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+  canvas.width = 0;
+  canvas.height = 0;
   pdf.cleanup();
   return dataUrl;
 }
@@ -53,6 +55,8 @@ async function pdfPagesToDataUrls(blob: Blob, scale = 4.0): Promise<string[]> {
     canvas.height = viewport.height;
     await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise;
     dataUrls.push(canvas.toDataURL('image/jpeg', 0.95));
+    canvas.width = 0;
+    canvas.height = 0;
   }
   pdf.cleanup();
   return dataUrls;
