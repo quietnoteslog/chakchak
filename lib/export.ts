@@ -521,13 +521,22 @@ export async function exportRecordsToPdf(
   .rp-detail .v { color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rp-image-wrap { display: flex; align-items: flex-start; justify-content: center; }
   .rp-image-wrap img { max-width: 88mm; max-height: 205mm; width: auto; height: auto; display: block; border: 1px solid #E5E9F2; }
-  .rp-image-wrap-full { width: 100%; }
-  .rp-image-wrap-full img { width: 100%; max-width: 100%; height: auto; display: block; }
-  .rp-page-single { grid-template-columns: 1fr; }
-  .rp-card-full { page-break-inside: auto; break-inside: auto; }
+  .rp-page-single { display: flex; flex-direction: column; height: 281mm; padding: 0; }
+  .rp-card-full { flex: 1; min-height: 0; display: flex; flex-direction: column; page-break-inside: auto; break-inside: auto; }
+  .rp-image-wrap-full { flex: 1; min-height: 0; overflow: hidden; width: 100%; display: flex; align-items: flex-start; justify-content: center; }
+  .rp-image-wrap-full img { width: 100%; height: 100%; object-fit: contain; object-position: top center; display: block; }
   .rp-no-image { padding: 12px; border: 2px dashed #D0D6E2; border-radius: 6px; color: #888; font-size: 12px; }
 
-  @media print { body { padding: 0; } .rp-page { page-break-before: always; break-before: page; } .rp-card { page-break-inside: avoid; break-inside: avoid; } .rp-card-full { page-break-inside: auto; break-inside: auto; } .rp-image-wrap img { max-width: 88mm; max-height: 205mm; } .rp-image-wrap-full img { width: 100%; max-width: 100%; height: auto; } }
+  @media print {
+    body { padding: 0; }
+    .rp-page { page-break-before: always; break-before: page; }
+    .rp-card { page-break-inside: avoid; break-inside: avoid; }
+    .rp-page-single { display: flex; flex-direction: column; height: 281mm; padding: 0; }
+    .rp-card-full { flex: 1; min-height: 0; display: flex; flex-direction: column; page-break-inside: auto; break-inside: auto; }
+    .rp-image-wrap img { max-width: 88mm; max-height: 205mm; }
+    .rp-image-wrap-full { flex: 1; min-height: 0; overflow: hidden; width: 100%; }
+    .rp-image-wrap-full img { width: 100%; height: 100%; object-fit: contain; object-position: top center; }
+  }
 </style></head><body>
   ${coverHtml}
   <div class="cover-footer">착착 - ${projectName}</div>
