@@ -22,7 +22,7 @@ async function getPdfjs(): Promise<any> {
   return _pdfjs;
 }
 
-async function pdfBlobToDataUrl(blob: Blob, scale = 2.0): Promise<string> {
+async function pdfBlobToDataUrl(blob: Blob, scale = 3.0): Promise<string> {
   const pdfjsLib = await getPdfjs();
   const arrayBuffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -39,7 +39,7 @@ async function pdfBlobToDataUrl(blob: Blob, scale = 2.0): Promise<string> {
 }
 
 // 각 페이지를 별도 이미지 배열로 반환 (세금계산서/견적서용)
-async function pdfPagesToDataUrls(blob: Blob, scale = 2.0): Promise<string[]> {
+async function pdfPagesToDataUrls(blob: Blob, scale = 3.0): Promise<string[]> {
   const pdfjsLib = await getPdfjs();
   const arrayBuffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -521,12 +521,13 @@ export async function exportRecordsToPdf(
   .rp-detail .v { color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rp-image-wrap { display: flex; align-items: flex-start; justify-content: center; }
   .rp-image-wrap img { max-width: 88mm; max-height: 205mm; width: auto; height: auto; display: block; border: 1px solid #E5E9F2; }
-  .rp-image-wrap-full img { max-width: 180mm; width: 100%; height: auto; }
+  .rp-image-wrap-full { width: 100%; }
+  .rp-image-wrap-full img { width: 100%; max-width: 100%; height: auto; display: block; }
   .rp-page-single { grid-template-columns: 1fr; }
   .rp-card-full { page-break-inside: auto; break-inside: auto; }
   .rp-no-image { padding: 12px; border: 2px dashed #D0D6E2; border-radius: 6px; color: #888; font-size: 12px; }
 
-  @media print { body { padding: 0; } .rp-page { page-break-before: always; break-before: page; } .rp-card { page-break-inside: avoid; break-inside: avoid; } .rp-card-full { page-break-inside: auto; break-inside: auto; } .rp-image-wrap img { max-width: 88mm; max-height: 205mm; } .rp-image-wrap-full img { max-width: 180mm; } }
+  @media print { body { padding: 0; } .rp-page { page-break-before: always; break-before: page; } .rp-card { page-break-inside: avoid; break-inside: avoid; } .rp-card-full { page-break-inside: auto; break-inside: auto; } .rp-image-wrap img { max-width: 88mm; max-height: 205mm; } .rp-image-wrap-full img { width: 100%; max-width: 100%; height: auto; } }
 </style></head><body>
   ${coverHtml}
   <div class="cover-footer">착착 - ${projectName}</div>
