@@ -22,7 +22,7 @@ async function getPdfjs(): Promise<any> {
   return _pdfjs;
 }
 
-async function pdfBlobToDataUrl(blob: Blob, scale = 3.0): Promise<string> {
+async function pdfBlobToDataUrl(blob: Blob, scale = 4.0): Promise<string> {
   const pdfjsLib = await getPdfjs();
   const arrayBuffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -39,7 +39,7 @@ async function pdfBlobToDataUrl(blob: Blob, scale = 3.0): Promise<string> {
 }
 
 // 각 페이지를 별도 이미지 배열로 반환 (세금계산서/견적서용)
-async function pdfPagesToDataUrls(blob: Blob, scale = 3.0): Promise<string[]> {
+async function pdfPagesToDataUrls(blob: Blob, scale = 4.0): Promise<string[]> {
   const pdfjsLib = await getPdfjs();
   const arrayBuffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -520,7 +520,7 @@ export async function exportRecordsToPdf(
   .rp-detail .k { color: #888; font-weight: 700; min-width: 40px; flex-shrink: 0; }
   .rp-detail .v { color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rp-image-wrap { display: flex; align-items: flex-start; justify-content: center; }
-  .rp-image-wrap img { max-width: 88mm; max-height: 205mm; width: auto; height: auto; display: block; border: 1px solid #E5E9F2; }
+  .rp-image-wrap img { max-width: 100%; max-height: 250mm; width: auto; height: auto; display: block; border: 1px solid #E5E9F2; }
   .rp-page-single { display: flex; flex-direction: column; height: 281mm; padding: 0; }
   .rp-card-full { flex: 1; min-height: 0; display: flex; flex-direction: column; page-break-inside: auto; break-inside: auto; }
   .rp-image-wrap-full { flex: 1; min-height: 0; overflow: hidden; width: 100%; display: block; }
@@ -533,7 +533,7 @@ export async function exportRecordsToPdf(
     .rp-card { page-break-inside: avoid; break-inside: avoid; }
     .rp-page-single { display: flex; flex-direction: column; height: 281mm; padding: 0; }
     .rp-card-full { flex: 1; min-height: 0; display: flex; flex-direction: column; page-break-inside: auto; break-inside: auto; }
-    .rp-image-wrap img { max-width: 88mm; max-height: 205mm; }
+    .rp-image-wrap img { max-width: 100%; max-height: 250mm; }
     .rp-image-wrap-full { flex: 1; min-height: 0; overflow: hidden; width: 100%; display: block; }
     .rp-image-wrap-full img { width: 100%; height: 100%; max-width: none; max-height: none; border: none; object-fit: contain; object-position: top; }
   }
