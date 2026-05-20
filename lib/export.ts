@@ -22,7 +22,7 @@ async function getPdfjs(): Promise<any> {
   return _pdfjs;
 }
 
-async function pdfBlobToDataUrl(blob: Blob, scale = 4.0): Promise<string> {
+async function pdfBlobToDataUrl(blob: Blob, scale = 3.5): Promise<string> {
   const pdfjsLib = await getPdfjs();
   const arrayBuffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -41,7 +41,7 @@ async function pdfBlobToDataUrl(blob: Blob, scale = 4.0): Promise<string> {
 }
 
 // 각 페이지를 별도 이미지 배열로 반환 (세금계산서/견적서용)
-async function pdfPagesToDataUrls(blob: Blob, scale = 4.0): Promise<string[]> {
+async function pdfPagesToDataUrls(blob: Blob, scale = 3.5): Promise<string[]> {
   const pdfjsLib = await getPdfjs();
   const arrayBuffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
