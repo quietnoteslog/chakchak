@@ -50,7 +50,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
   );
   const [merchant, setMerchant] = useState(existing?.merchant ?? '');
   const [content, setContent] = useState(existing?.content ?? '');
-  const isTaxInvoice = type === '세금계산서';
+  const isTaxInvoice = type === '세금계산서' || type === '견적서';
   // 세금계산서: amount = 합계(공급가액+부가세), vatAmount = 부가세
   const existingVat = existing?.vatAmount;
   const existingSupply = existingVat != null ? existing!.amount - existingVat : null;
@@ -152,7 +152,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
     e.preventDefault();
     if ((project.categories ?? []).length === 0) { setError('카테고리1을 먼저 추가하세요 (프로젝트 상세 > 설정)'); return; }
     if (!categoryId) { setError('카테고리1을 선택하세요'); return; }
-    const isTax = type === '세금계산서';
+    const isTax = isTaxInvoice;
     const supplyAmt = isTax ? Number(supplyAmount) : 0;
     const vatAmt = isTax ? Number(vatAmount) : 0;
     const amt = isTax ? supplyAmt + vatAmt : Number(amount);
@@ -202,7 +202,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         merchant: merchant.trim(),
         content: content.trim(),
         amount: amt,
-        vatAmount: type === '세금계산서' && vatAmt > 0 ? vatAmt : undefined,
+        vatAmount: isTaxInvoice && vatAmt > 0 ? vatAmt : undefined,
         currency: currency !== 'KRW' ? currency : undefined,
         amountKRW: currency !== 'KRW' && amountKRW ? Number(amountKRW) : undefined,
         paymentType,
@@ -346,7 +346,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
 
       {isTaxInvoice ? (
         <div style={{ display: 'grid', gap: 8, padding: 12, background: '#f5f7fb', borderRadius: 10, border: '1px solid #e5e9f2' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 2 }}>금액 (세금계산서)</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 2 }}>금액 (공급가액 + 부가세)</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
             <Field label="공급가액 *">
               <input
