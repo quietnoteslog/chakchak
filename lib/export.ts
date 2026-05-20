@@ -303,7 +303,7 @@ interface PdfOptions {
 const DEFAULT_PDF_COLS: Record<string, boolean> = {
   no: true, date: true, type: true, category1: true, category2: true,
   merchant: true, content: true, amount: true,
-  paymentType: true, payer: false, userNames: false, memo: false,
+  paymentType: true, payer: false, userNames: false, memo: true,
 };
 
 const COL_DEFS: { key: string; label: string; width: string; align?: string }[] = [
