@@ -94,6 +94,14 @@ export async function deleteProject(projectId: string) {
   await deleteDoc(doc(db, PROJECTS, projectId));
 }
 
+export async function updateProjectDates(projectId: string, startDate: Date, endDate: Date | null) {
+  await updateDoc(doc(db, PROJECTS, projectId), {
+    startDate: Timestamp.fromDate(startDate),
+    endDate: endDate ? Timestamp.fromDate(endDate) : null,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function deleteUserData(
   uid: string,
   deleteOwnedProjects = false

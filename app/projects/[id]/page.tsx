@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/AuthContext';
 import {
   getProject,
   deleteProject,
+  updateProjectDates,
   listRecords,
   deleteRecord,
   addCategory,
@@ -41,6 +42,8 @@ export default function ProjectDetailPage() {
   const [newCategory2, setNewCategory2] = useState('');
   const [cardBank, setCardBank] = useState('');
   const [cardNumber, setCardNumber] = useState('');
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
   // 필터
   const [filterType, setFilterType] = useState<string>('');           // 구분
   const [filterCategory2, setFilterCategory2] = useState<string>(''); // 카테고리2
@@ -80,7 +83,11 @@ export default function ProjectDetailPage() {
       const p = await getProject(projectId);
       if (!p) setError('프로젝트를 찾을 수 없습니다');
       else if (!p.memberIds.includes(user.uid)) setError('접근 권한이 없습니다');
-      else setProject(p);
+      else {
+        setProject(p);
+        setEditStartDate(p.startDate.toDate().toISOString().slice(0, 10));
+        setEditEndDate(p.endDate ? p.endDate.toDate().toISOString().slice(0, 10) : '');
+      }
     } catch {
       setError('불러오기 실패');
     } finally {
@@ -137,6 +144,14 @@ export default function ProjectDetailPage() {
   const resetFilters = () => {
     setFilterType(''); setFilterCategory2(''); setFilterPayer(''); setFilterPaymentType(''); setFilterQuery('');
     setFilterDateFrom(''); setFilterDateTo(''); setFilterAmountMin(''); setFilterAmountMax('');
+  };
+
+  const onUpdateDates = async () => {
+    if (!project || !isOwner || !editStartDate) return;
+    try {
+      await updateProjectDates(project.id, new Date(editStartDate), editEndDate ? new Date(editEndDate) : null);
+      await loadProject();
+    } catch { alert('기간 업데이트 실패'); }
   };
 
   const onDeleteProject = async () => {
@@ -355,6 +370,15 @@ export default function ProjectDetailPage() {
                       </span>
                     ))}
                     {(project.categories2 ?? []).length === 0 && <span style={{ fontSize: 12, color: '#888' }}>추가된 카테고리 없음</span>}
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 16 }}>
+                  <h3 style={settingsTitle}>프로젝트 기간</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 6 }}>
+                    <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} style={inlineInput} />
+                    <input type="date" value={editEndDate} onChange={(e) => setEditEndDate(e.target.value)} style={inlineInput} placeholder="종료일 (선택)" />
+                    <button onClick={onUpdateDates} style={{ ...btnPrimary, cursor: 'pointer' }}>저장</button>
                   </div>
                 </div>
 
