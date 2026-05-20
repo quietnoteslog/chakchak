@@ -37,24 +37,21 @@ export async function POST(req: NextRequest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  const isTaxInvoice = documentType === '세금계산서';
+  const isTaxInvoice = documentType === '세금계산서' || documentType === '견적서';
   const merchantInstruction = isTaxInvoice
     ? '"merchant": string | null,   // 공급자(판매자)의 상호명. 공급받는자(구매자) 아님. 못 읽으면 null'
     : '"merchant": string | null,   // 가맹점(상호)명. 못 읽으면 null';
 
-  const vatField = isTaxInvoice
-    ? `  "vatAmount": number | null,  // 부가가치세 금액(정수). 못 읽으면 null\n`
+  const taxFields = isTaxInvoice
+    ? `  "supplyAmount": number | null, // 공급가액(부가세 제외) 정수. 못 읽으면 null\n  "vatAmount": number | null,    // 부가가치세 금액 정수. 못 읽으면 null\n`
     : '';
-  const amountNote = isTaxInvoice
-    ? '"amount": 합계금액(공급가액+부가가치세) 정수. "vatAmount": 부가가치세 정수.'
-    : '"amount": 총 결제 금액 정수.';
 
   const prompt = `이 문서 이미지에서 정보를 추출해 아래 JSON 스키마로만 응답하세요. 설명, 마크다운 블록 없이 순수 JSON만.
 
 {
   ${merchantInstruction}
-  "amount": number | null,     // ${amountNote} 못 읽으면 null
-${vatField}  "date": string | null,       // 거래 일자 "YYYY-MM-DD". 못 읽으면 null
+  "amount": number | null,     // 합계금액(공급가액+부가가치세) 정수. 못 읽으면 null
+${taxFields}  "date": string | null,       // 거래 일자 "YYYY-MM-DD". 못 읽으면 null
   "currency": string | null,   // ISO 4217 통화 코드 (예: "KRW", "USD", "JPY", "EUR"). 판단 불가 시 null
   "confidence": number         // 0.0 ~ 1.0 신뢰도 (모든 필드 평균)
 }
@@ -62,7 +59,7 @@ ${vatField}  "date": string | null,       // 거래 일자 "YYYY-MM-DD". 못 읽
 주의:
 - 금액은 정수만 (1000 등). 통화기호/쉼표 제외.
 - 날짜는 반드시 YYYY-MM-DD 형식.
-- 통화는 영수증에 명시된 통화 또는 언어/국가 맥락으로 판단. 한국 문서이면 "KRW".${isTaxInvoice ? '\n- 세금계산서: 공급자(좌측 또는 상단) 상호명을 merchant로. 공급받는자(우측 또는 하단) 정보 사용 금지.' : ''}
+- 통화는 영수증에 명시된 통화 또는 언어/국가 맥락으로 판단. 한국 문서이면 "KRW".${isTaxInvoice ? '\n- 공급자(좌측 또는 상단) 상호명을 merchant로. 공급받는자(우측 또는 하단) 정보 사용 금지.\n- supplyAmount(공급가액)와 vatAmount(부가세)를 반드시 별도로 추출. amount는 둘의 합계.' : ''}
 - 읽을 수 없으면 모든 값을 null로, confidence를 0.0으로.`;
 
   try {

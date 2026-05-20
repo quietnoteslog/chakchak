@@ -130,11 +130,12 @@ export default function RecordForm({ project, currentUid, currentName, existing,
       setOcr(result);
       if (result.amount != null) {
         setAmount(String(result.amount));
-        if (result.vatAmount != null) {
+        if (result.supplyAmount != null) {
+          setSupplyAmount(String(result.supplyAmount));
+          if (result.vatAmount != null) setVatAmount(String(result.vatAmount));
+        } else if (result.vatAmount != null) {
           setVatAmount(String(result.vatAmount));
           setSupplyAmount(String(result.amount - result.vatAmount));
-        } else {
-          setSupplyAmount(String(result.amount));
         }
       }
       if (result.date) setDate(result.date);

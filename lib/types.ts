@@ -86,9 +86,10 @@ export interface ExpenseRecord {
 export interface OcrResult {
   merchant: string | null;
   amount: number | null;
-  vatAmount?: number | null; // 부가세 (세금계산서 전용)
+  supplyAmount?: number | null; // 공급가액 (세금계산서/견적서 전용)
+  vatAmount?: number | null;    // 부가세 (세금계산서/견적서 전용)
   date: string | null;
-  currency: string | null;   // 통화 코드 (KRW, USD, JPY 등)
+  currency: string | null;      // 통화 코드 (KRW, USD, JPY 등)
   confidence: number;
 }
 
