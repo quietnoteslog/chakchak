@@ -36,7 +36,10 @@ export default function ProjectDetailPage() {
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [zipProgress, setZipProgress] = useState<{ done: number; total: number } | null>(null);
-  const [selectedTab, setSelectedTab] = useState<string>(ALL_TAB);
+  const [selectedTab, setSelectedTab] = useState<string>(() => {
+    if (typeof window !== 'undefined') return sessionStorage.getItem(`tab_${params.id}`) ?? ALL_TAB;
+    return ALL_TAB;
+  });
   const [showSettings, setShowSettings] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [newCategory2, setNewCategory2] = useState('');
@@ -56,6 +59,11 @@ export default function ProjectDetailPage() {
   const [filterAmountMax, setFilterAmountMax] = useState<string>(''); // 금액 최대
   const [showFilter, setShowFilter] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const changeTab = (tab: string) => {
+    setSelectedTab(tab);
+    sessionStorage.setItem(`tab_${params.id}`, tab);
+    setSelectedIds(new Set());
+  };
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [pdfColumns, setPdfColumns] = useState<Record<string, boolean>>({
     no: true, date: true, type: true, category1: true, category2: true,
@@ -242,7 +250,7 @@ export default function ProjectDetailPage() {
     if (inUse && !confirm(`"${name}" 카테고리1에 내역이 있습니다. 삭제해도 기존 내역은 남지만 필터 탭에서 사라집니다. 계속할까요?`)) return;
     if (!confirm(`"${name}" 카테고리1을 삭제할까요?`)) return;
     await removeCategory(project.id, name);
-    if (selectedTab === name) setSelectedTab(ALL_TAB);
+    if (selectedTab === name) changeTab(ALL_TAB);
     await loadProject();
   };
 
@@ -408,11 +416,11 @@ export default function ProjectDetailPage() {
             )}
 
             <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-              <TabBtn active={selectedTab === ALL_TAB} onClick={() => { setSelectedTab(ALL_TAB); setSelectedIds(new Set()); }}>전체 ({records.length})</TabBtn>
+              <TabBtn active={selectedTab === ALL_TAB} onClick={() => changeTab(ALL_TAB)}>전체 ({records.length})</TabBtn>
               {(project.categories ?? []).map((c) => {
                 const count = records.filter((r) => r.categoryId === c).length;
                 return (
-                  <TabBtn key={c} active={selectedTab === c} onClick={() => { setSelectedTab(c); setSelectedIds(new Set()); }}>{c} ({count})</TabBtn>
+                  <TabBtn key={c} active={selectedTab === c} onClick={() => changeTab(c)}>{c} ({count})</TabBtn>
                 );
               })}
             </div>
