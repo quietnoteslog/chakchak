@@ -36,10 +36,7 @@ export default function ProjectDetailPage() {
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [zipProgress, setZipProgress] = useState<{ done: number; total: number } | null>(null);
-  const [selectedTab, setSelectedTab] = useState<string>(() => {
-    if (typeof window !== 'undefined') return sessionStorage.getItem(`tab_${params.id}`) ?? ALL_TAB;
-    return ALL_TAB;
-  });
+  const [selectedTab, setSelectedTab] = useState<string>(ALL_TAB);
   const [showSettings, setShowSettings] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [newCategory2, setNewCategory2] = useState('');
@@ -84,6 +81,11 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
   }, [user, loading, router]);
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(`tab_${projectId}`);
+    if (saved) setSelectedTab(saved);
+  }, [projectId]);
 
   const loadProject = async () => {
     if (!user || !projectId) return;
