@@ -155,7 +155,9 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
     { header: '카테고리2', key: 'categoryId2', width: 14 },
     { header: '구매처', key: 'merchant', width: 20 },
     { header: '내용', key: 'content', width: 20 },
-    { header: '금액', key: 'amount', width: 14 },
+    { header: '공급가액', key: 'supplyAmount', width: 14 },
+    { header: '세금', key: 'vatAmount', width: 12 },
+    { header: '합계금액', key: 'amount', width: 14 },
     { header: '통화', key: 'currency', width: 8 },
     { header: '원화확정액', key: 'amountKRW', width: 14 },
     { header: '결제수단', key: 'paymentType', width: 10 },
@@ -174,6 +176,8 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
       categoryId2: r.categoryId2 || '',
       merchant: r.merchant,
       content: r.content || '',
+      supplyAmount: r.vatAmount != null ? (r.amount ?? 0) - r.vatAmount : '',
+      vatAmount: r.vatAmount ?? '',
       amount: r.amount,
       currency: r.currency || 'KRW',
       amountKRW: r.amountKRW ?? '',
@@ -227,6 +231,8 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F9FD' } };
       });
     }
+    if (row.getCell('supplyAmount').value) row.getCell('supplyAmount').numFmt = '#,##0';
+    if (row.getCell('vatAmount').value) row.getCell('vatAmount').numFmt = '#,##0';
     row.getCell('amount').numFmt = '#,##0';
     if (row.getCell('amountKRW').value) row.getCell('amountKRW').numFmt = '#,##0';
     row.alignment = { vertical: 'middle' };
@@ -324,7 +330,15 @@ function cellValue(r: ExpenseRecord, key: string, index: number): string {
     case 'category2': return escapeHtml(r.categoryId2 || '-');
     case 'merchant': return `<span style="font-weight:600">${escapeHtml(r.merchant)}</span>`;
     case 'content': return escapeHtml(r.content || '-');
-    case 'amount': return (r.amount ?? 0).toLocaleString('ko-KR');
+    case 'amount': {
+      const total = (r.amount ?? 0).toLocaleString('ko-KR');
+      if (r.vatAmount != null) {
+        const supply = ((r.amount ?? 0) - r.vatAmount).toLocaleString('ko-KR');
+        const vat = r.vatAmount.toLocaleString('ko-KR');
+        return `<span style="font-size:8.5px;color:#666;font-variant-numeric:tabular-nums;line-height:1.6">공급 ${supply}<br>세금 ${vat}<br></span>${total}`;
+      }
+      return total;
+    }
     case 'paymentType': return `${escapeHtml(r.paymentType || '')}${r.paymentCardLabel ? `<br><span style="font-size:9px;color:#888">${escapeHtml(r.paymentCardLabel)}</span>` : ''}`;
     case 'payer': return escapeHtml(r.payerName || r.createdByName || '-');
     case 'userNames': return escapeHtml(r.userNames || '-');
@@ -365,7 +379,15 @@ function renderRecordCard(r: ExpenseRecord, index: number, imgDataUrl: string | 
         <div class="rp-topmain">
           ${showNo ? `<div class="rp-no">#${no}</div>` : ''}
           ${showMerchant ? `<div class="rp-merchant">${escapeHtml(r.merchant)}</div>` : '<div class="rp-merchant"></div>'}
-          ${showAmount ? `<div class="rp-amount">${(r.amount ?? 0).toLocaleString('ko-KR')}원</div>` : ''}
+          ${showAmount ? (() => {
+            if (r.vatAmount != null) {
+              const supply = ((r.amount ?? 0) - r.vatAmount).toLocaleString('ko-KR');
+              const vat = r.vatAmount.toLocaleString('ko-KR');
+              const total = (r.amount ?? 0).toLocaleString('ko-KR');
+              return `<div class="rp-amount"><span style="font-size:9px;font-weight:400;color:#666">공급 ${supply} / 세금 ${vat}<br></span>${total}원</div>`;
+            }
+            return `<div class="rp-amount">${(r.amount ?? 0).toLocaleString('ko-KR')}원</div>`;
+          })() : ''}
         </div>
         ${detailCols.length > 0 ? `<div class="rp-details">${detailHtml}</div>` : ''}
       </div>
