@@ -55,6 +55,7 @@ export default function ProjectDetailPage() {
   const [filterAmountMin, setFilterAmountMin] = useState<string>(''); // 금액 최소
   const [filterAmountMax, setFilterAmountMax] = useState<string>(''); // 금액 최대
   const [showFilter, setShowFilter] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [pdfColumns, setPdfColumns] = useState<Record<string, boolean>>({
     no: true, date: true, type: true, category1: true, category2: true,
@@ -140,10 +141,14 @@ export default function ProjectDetailPage() {
   const foreignTotals = visibleRecords
     .filter(r => r.currency && r.currency !== 'KRW')
     .reduce((acc, r) => { acc[r.currency!] = (acc[r.currency!] ?? 0) + r.amount; return acc; }, {} as Record<string, number>);
+  const exportTargets = selectedIds.size > 0
+    ? visibleRecords.filter(r => selectedIds.has(r.id))
+    : visibleRecords;
   const activeFilterCount = [filterType, filterCategory2, filterPayer, filterPaymentType, q, filterDateFrom, filterDateTo, filterAmountMin, filterAmountMax].filter(Boolean).length;
   const resetFilters = () => {
     setFilterType(''); setFilterCategory2(''); setFilterPayer(''); setFilterPaymentType(''); setFilterQuery('');
     setFilterDateFrom(''); setFilterDateTo(''); setFilterAmountMin(''); setFilterAmountMax('');
+    setSelectedIds(new Set());
   };
 
   const onUpdateDates = async () => {
@@ -167,14 +172,14 @@ export default function ProjectDetailPage() {
   };
 
   const onExportExcel = () => {
-    if (!project || visibleRecords.length === 0) return;
+    if (!project || exportTargets.length === 0) return;
     // 화면: 최신순(내림차순), 엑셀: 오래된 순(오름차순)
-    const ordered = [...visibleRecords].reverse();
+    const ordered = [...exportTargets].reverse();
     try { exportRecordsToExcel(project, ordered); } catch (e) { console.error(e); alert('엑셀 생성 실패'); }
   };
 
   const onExportPdf = async () => {
-    if (!project || visibleRecords.length === 0) return;
+    if (!project || exportTargets.length === 0) return;
     // window.open을 클릭 핸들러 최상단에서 호출해야 모바일 팝업 차단 우회 가능
     const w = window.open('', '_blank');
     if (!w) { alert('팝업 차단을 해제하고 다시 시도해주세요'); return; }
@@ -189,7 +194,7 @@ export default function ProjectDetailPage() {
     setPdfGenerating(true);
     try {
       // 화면: 최신순(내림차순), PDF: 오래된 순(오름차순)
-      const ordered = [...visibleRecords].reverse();
+      const ordered = [...exportTargets].reverse();
       await exportRecordsToPdf(project, ordered, {
         filterSummary,
         columns: pdfColumns,
@@ -207,9 +212,9 @@ export default function ProjectDetailPage() {
   };
 
   const onExportZip = async () => {
-    if (!project || visibleRecords.length === 0) return;
-    setZipProgress({ done: 0, total: visibleRecords.length });
-    try { await exportReceiptsAsZip(project, visibleRecords, (done, total) => setZipProgress({ done, total })); }
+    if (!project || exportTargets.length === 0) return;
+    setZipProgress({ done: 0, total: exportTargets.length });
+    try { await exportReceiptsAsZip(project, exportTargets, (done, total) => setZipProgress({ done, total })); }
     catch (e) { console.error(e); alert(e instanceof Error ? e.message : 'Zip 생성 실패'); }
     finally { setZipProgress(null); }
   };
@@ -403,11 +408,11 @@ export default function ProjectDetailPage() {
             )}
 
             <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-              <TabBtn active={selectedTab === ALL_TAB} onClick={() => setSelectedTab(ALL_TAB)}>전체 ({records.length})</TabBtn>
+              <TabBtn active={selectedTab === ALL_TAB} onClick={() => { setSelectedTab(ALL_TAB); setSelectedIds(new Set()); }}>전체 ({records.length})</TabBtn>
               {(project.categories ?? []).map((c) => {
                 const count = records.filter((r) => r.categoryId === c).length;
                 return (
-                  <TabBtn key={c} active={selectedTab === c} onClick={() => setSelectedTab(c)}>{c} ({count})</TabBtn>
+                  <TabBtn key={c} active={selectedTab === c} onClick={() => { setSelectedTab(c); setSelectedIds(new Set()); }}>{c} ({count})</TabBtn>
                 );
               })}
             </div>
@@ -495,13 +500,35 @@ export default function ProjectDetailPage() {
 
             <section>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-                <h2 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>내역 ({visibleRecords.length})</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <h2 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>
+                    내역 ({visibleRecords.length}){selectedIds.size > 0 ? ` · ${selectedIds.size}개 선택` : ''}
+                  </h2>
+                  {visibleRecords.length > 0 && (
+                    <button
+                      onClick={() => {
+                        if (selectedIds.size === visibleRecords.length) {
+                          setSelectedIds(new Set());
+                        } else {
+                          setSelectedIds(new Set(visibleRecords.map(r => r.id)));
+                        }
+                      }}
+                      style={{ ...btnSmall, fontSize: 11, padding: '4px 8px' }}
+                    >
+                      {selectedIds.size === visibleRecords.length && visibleRecords.length > 0 ? '선택해제' : '전체선택'}
+                    </button>
+                  )}
+                </div>
                 {visibleRecords.length > 0 && (
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={onExportExcel} style={{ ...btnSmall, display: 'inline-flex', alignItems: 'center', gap: 4 }}><FileSpreadsheet size={14} />엑셀</button>
-                    <button onClick={() => setPdfModalOpen(true)} style={{ ...btnSmall, display: 'inline-flex', alignItems: 'center', gap: 4 }}><FileText size={14} />PDF</button>
+                    <button onClick={onExportExcel} style={{ ...btnSmall, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <FileSpreadsheet size={14} />엑셀{selectedIds.size > 0 ? <span style={selBadge}>{selectedIds.size}</span> : null}
+                    </button>
+                    <button onClick={() => setPdfModalOpen(true)} style={{ ...btnSmall, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <FileText size={14} />PDF{selectedIds.size > 0 ? <span style={selBadge}>{selectedIds.size}</span> : null}
+                    </button>
                     <button onClick={onExportZip} disabled={!!zipProgress} style={{ ...btnSmall, color: zipProgress ? '#999' : '#333', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      {zipProgress ? `Zip ${zipProgress.done}/${zipProgress.total}` : <><Archive size={14} />Zip</>}
+                      {zipProgress ? `Zip ${zipProgress.done}/${zipProgress.total}` : <><Archive size={14} />Zip{selectedIds.size > 0 ? <span style={selBadge}>{selectedIds.size}</span> : null}</>}
                     </button>
                   </div>
                 )}
@@ -517,26 +544,42 @@ export default function ProjectDetailPage() {
                     const isEditor = (project.editorIds ?? []).includes(user.uid);
                     const canEdit = r.createdBy === user.uid || isOwner || isEditor;
                     const cats = [r.categoryId, r.categoryId2].filter(Boolean).join(' · ');
+                    const isChecked = selectedIds.has(r.id);
                     return (
-                      <div key={r.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e9f2', padding: '14px 16px', boxShadow: '0 1px 4px rgba(100,120,200,0.06)' }}>
+                      <div key={r.id} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${isChecked ? '#7b9fe8' : '#e5e9f2'}`, padding: '14px 16px', boxShadow: '0 1px 4px rgba(100,120,200,0.06)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontSize: 11, color: '#aaa', fontVariantNumeric: 'tabular-nums' }}>#{visibleRecords.length - i}</span>
                             <span style={tag}>{r.type}</span>
                             <span style={{ fontSize: 12, color: '#888' }}>{formatDate(r.date)}</span>
                           </div>
-                          <div style={{ textAlign: 'right' }}>
-                            {r.vatAmount != null ? (
-                              <>
-                                <div style={{ fontSize: 10, color: '#888' }}>공급가 {formatMoney(r.amount - r.vatAmount)}원</div>
-                                <div style={{ fontSize: 10, color: '#888' }}>부가세 {formatMoney(r.vatAmount)}원</div>
-                                <div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>합계 {formatMoney(r.amount)}원</div>
-                              </>
-                            ) : (
-                              <span style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                                {r.currency && r.currency !== 'KRW' ? `${r.currency} ${r.amount.toLocaleString()}` : `${formatMoney(r.amount)}원`}
-                              </span>
-                            )}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                            <div style={{ textAlign: 'right' }}>
+                              {r.vatAmount != null ? (
+                                <>
+                                  <div style={{ fontSize: 10, color: '#888' }}>공급가 {formatMoney(r.amount - r.vatAmount)}원</div>
+                                  <div style={{ fontSize: 10, color: '#888' }}>부가세 {formatMoney(r.vatAmount)}원</div>
+                                  <div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>합계 {formatMoney(r.amount)}원</div>
+                                </>
+                              ) : (
+                                <span style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                                  {r.currency && r.currency !== 'KRW' ? `${r.currency} ${r.amount.toLocaleString()}` : `${formatMoney(r.amount)}원`}
+                                </span>
+                              )}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                setSelectedIds(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(r.id)) next.delete(r.id);
+                                  else next.add(r.id);
+                                  return next;
+                                });
+                              }}
+                              style={{ marginTop: 2, cursor: 'pointer' }}
+                            />
                           </div>
                         </div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{r.content || '-'}</div>
@@ -570,6 +613,19 @@ export default function ProjectDetailPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1000 }}>
                     <thead>
                       <tr style={{ background: '#f5f7fb', color: '#555' }}>
+                        <th style={{ ...thStyle, width: 32, textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.size === visibleRecords.length && visibleRecords.length > 0}
+                            onChange={() => {
+                              if (selectedIds.size === visibleRecords.length) {
+                                setSelectedIds(new Set());
+                              } else {
+                                setSelectedIds(new Set(visibleRecords.map(r => r.id)));
+                              }
+                            }}
+                          />
+                        </th>
                         <th style={thStyle}>#</th>
                         <th style={thStyle}>일자</th>
                         <th style={thStyle}>구분</th>
@@ -589,8 +645,23 @@ export default function ProjectDetailPage() {
                       {visibleRecords.map((r, i) => {
                         const isEditor = (project.editorIds ?? []).includes(user.uid);
                         const canEdit = r.createdBy === user.uid || isOwner || isEditor;
+                        const isChecked = selectedIds.has(r.id);
                         return (
-                          <tr key={r.id} style={{ borderTop: '1px solid #eef1f7' }}>
+                          <tr key={r.id} style={{ borderTop: '1px solid #eef1f7', background: isChecked ? '#f0f4ff' : undefined }}>
+                            <td style={{ ...tdStyle, textAlign: 'center', padding: '10px 6px' }}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  setSelectedIds(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(r.id)) next.delete(r.id);
+                                    else next.add(r.id);
+                                    return next;
+                                  });
+                                }}
+                              />
+                            </td>
                             <td style={{ ...tdStyle, color: '#888', textAlign: 'center' }}>{visibleRecords.length - i}</td>
                             <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDate(r.date)}</td>
                             <td style={tdStyle}><span style={tag}>{r.type}</span></td>
@@ -774,6 +845,7 @@ const filterLabel: React.CSSProperties = { fontSize: 11, fontWeight: 600, color:
 const modalOverlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000 };
 const modalBox: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: 20, maxWidth: 420, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' };
 const colToggleRow: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 12px', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', background: '#fff' };
+const selBadge: React.CSSProperties = { fontSize: 10, fontWeight: 700, background: '#7b9fe8', color: '#fff', borderRadius: 8, padding: '1px 5px', marginLeft: 2 };
 
 function buildFilterSummary(f: { tab: string; type: string; category2: string; payer: string; paymentType: string; query: string }): string {
   const parts: string[] = [];
