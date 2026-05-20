@@ -516,10 +516,11 @@ export async function exportRecordsToPdf(
   const html = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8">
 <title>${projectName} 경비 내역 ${generatedAt}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css">
 <style>
   @page { size: ${pageSize}; margin: 8mm; }
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: #222; margin: 0; padding: 14px; font-size: 10px; }
+  body { font-family: 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: #222; margin: 0; padding: 14px; font-size: 10px; }
   h1 { font-size: 16px; margin: 0 0 4px; }
   .meta { color: #666; font-size: 10px; margin-bottom: 4px; }
   .filter { font-size: 10px; color: #4a6bc4; margin-bottom: 10px; padding: 6px 8px; background: #eef4ff; border-radius: 4px; }
@@ -568,7 +569,7 @@ export async function exportRecordsToPdf(
   <div class="cover-footer">착착 - ${projectName}</div>
   ${bodyHtml}
   <script>
-    window.addEventListener('load', () => { setTimeout(() => window.print(), 500); });
+    window.addEventListener('load', () => { document.fonts.ready.then(() => { setTimeout(() => window.print(), 200); }); });
   </script>
 </body></html>`;
 
