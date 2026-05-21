@@ -58,6 +58,7 @@ export const PAYMENT_METHODS: PaymentMethod[] = ['법인카드', '개인카드',
 export interface ExpenseRecord {
   id: string;
   projectId: string;
+  voucherNo?: string;        // 증빙번호 (사용자 입력)
   date: Timestamp;
   type: RecordType;
   categoryId: string;        // 카테고리1

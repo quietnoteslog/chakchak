@@ -301,6 +301,7 @@ export async function acceptInviteByToken(
 // --- records (경비 내역) ---
 
 export interface RecordInput {
+  voucherNo?: string;
   date: Date;
   type: RecordType;
   categoryId: string;
@@ -326,6 +327,7 @@ export interface RecordInput {
 export async function addRecord(projectId: string, uid: string, input: RecordInput): Promise<string> {
   const ref = await addDoc(collection(db, PROJECTS, projectId, 'records'), {
     projectId,
+    ...(input.voucherNo ? { voucherNo: input.voucherNo } : {}),
     date: Timestamp.fromDate(input.date),
     type: input.type,
     categoryId: input.categoryId,

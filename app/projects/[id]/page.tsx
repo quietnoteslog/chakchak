@@ -55,6 +55,7 @@ export default function ProjectDetailPage() {
   const [filterAmountMin, setFilterAmountMin] = useState<string>(''); // 금액 최소
   const [filterAmountMax, setFilterAmountMax] = useState<string>(''); // 금액 최대
   const [showFilter, setShowFilter] = useState(false);
+  const [sortBy, setSortBy] = useState<'date' | 'voucherNo'>('date');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const changeTab = (tab: string) => {
     setSelectedTab(tab);
@@ -63,7 +64,7 @@ export default function ProjectDetailPage() {
   };
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [pdfColumns, setPdfColumns] = useState<Record<string, boolean>>({
-    no: true, date: true, type: true, category1: true, category2: true,
+    no: true, voucherNo: true, date: true, type: true, category1: true, category2: true,
     merchant: true, content: true, amount: true,
     paymentType: true, payer: false, userNames: false, memo: false,
   });
@@ -146,6 +147,16 @@ export default function ProjectDetailPage() {
       if (!hay.includes(q)) return false;
     }
     return true;
+  }).sort((a, b) => {
+    if (sortBy === 'voucherNo') {
+      const va = a.voucherNo ?? '';
+      const vb = b.voucherNo ?? '';
+      if (va === '' && vb === '') return 0;
+      if (va === '') return 1;
+      if (vb === '') return -1;
+      return va.localeCompare(vb, 'ko', { numeric: true });
+    }
+    return b.date.toMillis() - a.date.toMillis();
   });
   const total = visibleRecords.filter(r => !r.currency || r.currency === 'KRW').reduce((s, r) => s + (r.amount ?? 0), 0);
   const foreignTotals = visibleRecords
@@ -514,6 +525,10 @@ export default function ProjectDetailPage() {
                   <h2 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>
                     내역 ({visibleRecords.length}){selectedIds.size > 0 ? ` · ${selectedIds.size}개 선택` : ''}
                   </h2>
+                  <div style={{ display: 'flex', border: '1px solid #d0d6e2', borderRadius: 6, overflow: 'hidden', fontSize: 11 }}>
+                    <button onClick={() => setSortBy('date')} style={{ padding: '3px 8px', background: sortBy === 'date' ? '#7b9fe8' : '#fff', color: sortBy === 'date' ? '#fff' : '#666', border: 'none', cursor: 'pointer', fontWeight: sortBy === 'date' ? 700 : 400 }}>날짜순</button>
+                    <button onClick={() => setSortBy('voucherNo')} style={{ padding: '3px 8px', background: sortBy === 'voucherNo' ? '#7b9fe8' : '#fff', color: sortBy === 'voucherNo' ? '#fff' : '#666', border: 'none', cursor: 'pointer', fontWeight: sortBy === 'voucherNo' ? 700 : 400 }}>증빙번호순</button>
+                  </div>
                   {visibleRecords.length > 0 && (
                     <button
                       onClick={() => {
@@ -560,6 +575,7 @@ export default function ProjectDetailPage() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontSize: 11, color: '#aaa', fontVariantNumeric: 'tabular-nums' }}>#{visibleRecords.length - i}</span>
+                            {r.voucherNo && <span style={{ fontSize: 11, color: '#7b9fe8', fontWeight: 600 }}>{r.voucherNo}</span>}
                             <span style={tag}>{r.type}</span>
                             <span style={{ fontSize: 12, color: '#888' }}>{formatDate(r.date)}</span>
                           </div>
@@ -637,6 +653,7 @@ export default function ProjectDetailPage() {
                           />
                         </th>
                         <th style={thStyle}>#</th>
+                        <th style={thStyle}>증빙번호</th>
                         <th style={thStyle}>일자</th>
                         <th style={thStyle}>구분</th>
                         <th style={thStyle}>카테고리1</th>
@@ -673,6 +690,7 @@ export default function ProjectDetailPage() {
                               />
                             </td>
                             <td style={{ ...tdStyle, color: '#888', textAlign: 'center' }}>{visibleRecords.length - i}</td>
+                            <td style={{ ...tdStyle, color: '#7b9fe8', fontWeight: 600, whiteSpace: 'nowrap' }}>{r.voucherNo || '-'}</td>
                             <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDate(r.date)}</td>
                             <td style={tdStyle}><span style={tag}>{r.type}</span></td>
                             <td style={{ ...tdStyle, color: '#666' }}>{r.categoryId || '-'}</td>
@@ -783,6 +801,7 @@ export default function ProjectDetailPage() {
 
 const PDF_COLUMN_DEFS: { key: string; label: string; note?: string }[] = [
   { key: 'no', label: '순번' },
+  { key: 'voucherNo', label: '증빙번호' },
   { key: 'date', label: '일자' },
   { key: 'type', label: '구분' },
   { key: 'category1', label: '카테고리1' },

@@ -70,6 +70,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
   );
   const [userNames, setUserNames] = useState(existing?.userNames ?? '');
   const [memo, setMemo] = useState(existing?.memo ?? '');
+  const [voucherNo, setVoucherNo] = useState(existing?.voucherNo ?? '');
 
   useEffect(() => {
     return () => {
@@ -212,6 +213,7 @@ export default function RecordForm({ project, currentUid, currentName, existing,
         payerId: finalPayerId,
         payerName,
         userNames: userNames.trim(),
+        voucherNo: voucherNo.trim() || undefined,
         memo: memo.trim(),
         receiptUrl,
         receiptPath,
@@ -471,6 +473,10 @@ export default function RecordForm({ project, currentUid, currentName, existing,
           <input value={userNames} onChange={(e) => setUserNames(e.target.value)} style={inputStyle} placeholder="예) 홍길동 외 2명" />
         </Field>
       </div>
+
+      <Field label="증빙번호 (선택)">
+        <input value={voucherNo} onChange={(e) => setVoucherNo(e.target.value)} style={inputStyle} placeholder="예) 2024-001" />
+      </Field>
 
       <Field label="메모 (선택)">
         <textarea value={memo} onChange={(e) => setMemo(e.target.value)} style={{ ...inputStyle, minHeight: 60, fontFamily: 'inherit' }} />

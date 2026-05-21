@@ -149,6 +149,7 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
 
   ws.columns = [
     { header: 'No', key: 'no', width: 5 },
+    { header: '증빙번호', key: 'voucherNo', width: 12 },
     { header: '일자', key: 'date', width: 12 },
     { header: '구분', key: 'type', width: 10 },
     { header: '카테고리1', key: 'categoryId', width: 14 },
@@ -170,6 +171,7 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
   records.forEach((r, i) => {
     ws.addRow({
       no: i + 1,
+      voucherNo: r.voucherNo || '',
       date: formatFullDate(r.date.toDate()),
       type: r.type || '',
       categoryId: r.categoryId || '',
@@ -301,13 +303,14 @@ interface PdfOptions {
 }
 
 const DEFAULT_PDF_COLS: Record<string, boolean> = {
-  no: true, date: true, type: true, category1: true, category2: true,
+  no: true, voucherNo: true, date: true, type: true, category1: true, category2: true,
   merchant: true, content: true, amount: true,
   paymentType: true, payer: false, userNames: false, memo: true,
 };
 
 const COL_DEFS: { key: string; label: string; width: string; align?: string }[] = [
   { key: 'no', label: 'No', width: '3%', align: 'center' },
+  { key: 'voucherNo', label: '증빙번호', width: '7%' },
   { key: 'date', label: '일자', width: '7%' },
   { key: 'type', label: '구분', width: '6%' },
   { key: 'category1', label: '카테고리1', width: '8%' },
@@ -324,6 +327,7 @@ const COL_DEFS: { key: string; label: string; width: string; align?: string }[] 
 function cellValue(r: ExpenseRecord, key: string, index: number): string {
   switch (key) {
     case 'no': return String(index + 1);
+    case 'voucherNo': return escapeHtml(r.voucherNo || '-');
     case 'date': return formatFullDate(r.date.toDate());
     case 'type': return escapeHtml(r.type || '');
     case 'category1': return escapeHtml(r.categoryId || '-');
