@@ -202,8 +202,7 @@ export default function ProjectDetailPage() {
 
   const onExportExcel = () => {
     if (!project || exportTargets.length === 0) return;
-    // 화면: 최신순(내림차순), 엑셀: 오래된 순(오름차순)
-    const ordered = [...exportTargets].reverse();
+    const ordered = sortBy === 'date' ? [...exportTargets].reverse() : [...exportTargets];
     try { exportRecordsToExcel(project, ordered); } catch (e) { console.error(e); alert('엑셀 생성 실패'); }
   };
 
@@ -222,8 +221,7 @@ export default function ProjectDetailPage() {
     });
     setPdfGenerating(true);
     try {
-      // 화면: 최신순(내림차순), PDF: 오래된 순(오름차순)
-      const ordered = [...exportTargets].reverse();
+      const ordered = sortBy === 'date' ? [...exportTargets].reverse() : [...exportTargets];
       await exportRecordsToPdf(project, ordered, {
         filterSummary,
         columns: pdfColumns,
