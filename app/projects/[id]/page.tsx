@@ -154,7 +154,13 @@ export default function ProjectDetailPage() {
       if (va === '' && vb === '') return 0;
       if (va === '') return 1;
       if (vb === '') return -1;
-      return va.localeCompare(vb, 'ko', { numeric: true });
+      const pa = va.split(/\D+/).map(Number);
+      const pb = vb.split(/\D+/).map(Number);
+      for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+        if (diff !== 0) return diff;
+      }
+      return va.localeCompare(vb);
     }
     return b.date.toMillis() - a.date.toMillis();
   });
