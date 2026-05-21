@@ -191,7 +191,7 @@ export async function exportRecordsToExcel(project: Project, records: ExpenseRec
     });
   });
 
-  const total = records.reduce((s, r) => s + (r.amount ?? 0), 0);
+  const total = records.reduce((s, r) => s + (r.amountKRW ?? ((!r.currency || r.currency === 'KRW') ? (r.amount ?? 0) : 0)), 0);
   const totalRow = ws.addRow({
     no: '',
     date: '',
@@ -335,6 +335,11 @@ function cellValue(r: ExpenseRecord, key: string, index: number): string {
     case 'merchant': return `<span style="font-weight:600">${escapeHtml(r.merchant)}</span>`;
     case 'content': return escapeHtml(r.content || '-');
     case 'amount': {
+      if (r.amountKRW) {
+        const krwFmt = `${r.amountKRW.toLocaleString('ko-KR')}원`;
+        const origFmt = `${r.currency} ${(r.amount ?? 0).toLocaleString('ko-KR')}`;
+        return `<span style="font-size:8.5px;color:#666;font-variant-numeric:tabular-nums;line-height:1.6">${origFmt}<br></span>${krwFmt}`;
+      }
       const curr = r.currency && r.currency !== 'KRW' ? ` ${r.currency}` : '원';
       const totalFmt = `${(r.amount ?? 0).toLocaleString('ko-KR')}${curr}`;
       if (r.vatAmount != null) {
@@ -385,6 +390,10 @@ function renderRecordCard(r: ExpenseRecord, index: number, imgDataUrl: string | 
           ${showNo ? `<div class="rp-no">#${no}</div>` : ''}
           ${showMerchant ? `<div class="rp-merchant">${escapeHtml(r.merchant)}</div>` : '<div class="rp-merchant"></div>'}
           ${showAmount ? (() => {
+            if (r.amountKRW) {
+              const orig = `${r.currency} ${(r.amount ?? 0).toLocaleString('ko-KR')}`;
+              return `<div class="rp-amount"><span style="font-size:9px;font-weight:400;color:#666">${orig}<br></span>${r.amountKRW.toLocaleString('ko-KR')}원</div>`;
+            }
             const curr = r.currency && r.currency !== 'KRW' ? ` ${r.currency}` : '원';
             if (r.vatAmount != null) {
               const supply = ((r.amount ?? 0) - r.vatAmount).toLocaleString('ko-KR');
@@ -415,7 +424,7 @@ export async function exportRecordsToPdf(
   w.document.write('<html><head><meta charset="utf-8"><title>PDF 생성 중...</title></head><body style="font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;color:#555;gap:10px"><p style="font-size:18px">PDF 생성 중...</p><p id="pdfProgress" style="font-size:13px;color:#888;margin:0">준비 중</p></body></html>');
   w.document.close();
 
-  const total = records.reduce((s, r) => s + (r.amount ?? 0), 0);
+  const total = records.reduce((s, r) => s + (r.amountKRW ?? ((!r.currency || r.currency === 'KRW') ? (r.amount ?? 0) : 0)), 0);
   const projectName = escapeHtml(project.name);
   const periodStart = formatFullDate(project.startDate.toDate());
   const periodEnd = project.endDate ? formatFullDate(project.endDate.toDate()) : '';

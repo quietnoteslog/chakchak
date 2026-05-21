@@ -164,9 +164,11 @@ export default function ProjectDetailPage() {
     }
     return b.date.toMillis() - a.date.toMillis();
   });
-  const total = visibleRecords.filter(r => !r.currency || r.currency === 'KRW').reduce((s, r) => s + (r.amount ?? 0), 0);
+  const total = visibleRecords
+    .filter(r => !r.currency || r.currency === 'KRW' || r.amountKRW)
+    .reduce((s, r) => s + (r.amountKRW ?? r.amount ?? 0), 0);
   const foreignTotals = visibleRecords
-    .filter(r => r.currency && r.currency !== 'KRW')
+    .filter(r => r.currency && r.currency !== 'KRW' && !r.amountKRW)
     .reduce((acc, r) => { acc[r.currency!] = (acc[r.currency!] ?? 0) + r.amount; return acc; }, {} as Record<string, number>);
   const exportTargets = selectedIds.size > 0
     ? visibleRecords.filter(r => selectedIds.has(r.id))
@@ -593,6 +595,11 @@ export default function ProjectDetailPage() {
                                   <div style={{ fontSize: 10, color: '#888' }}>부가세 {formatMoney(r.vatAmount)}원</div>
                                   <div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>합계 {formatMoney(r.amount)}원</div>
                                 </>
+                              ) : r.amountKRW ? (
+                                <div style={{ textAlign: 'right' }}>
+                                  <div style={{ fontSize: 10, color: '#888' }}>{r.currency} {r.amount.toLocaleString()}</div>
+                                  <span style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(r.amountKRW)}원</span>
+                                </div>
                               ) : (
                                 <span style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
                                   {r.currency && r.currency !== 'KRW' ? `${r.currency} ${r.amount.toLocaleString()}` : `${formatMoney(r.amount)}원`}
@@ -709,6 +716,11 @@ export default function ProjectDetailPage() {
                                   <span style={{ fontSize: 10, color: '#888' }}>공급 {formatMoney(r.amount - r.vatAmount)}</span>
                                   <span style={{ fontSize: 10, color: '#888' }}>VAT {formatMoney(r.vatAmount)}</span>
                                   <span style={{ fontWeight: 700 }}>{formatMoney(r.amount)}원</span>
+                                </div>
+                              ) : r.amountKRW ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                  <span style={{ fontSize: 10, color: '#888' }}>{r.currency} {r.amount.toLocaleString()}</span>
+                                  <span style={{ fontWeight: 700 }}>{formatMoney(r.amountKRW)}원</span>
                                 </div>
                               ) : r.currency && r.currency !== 'KRW' ? (
                                 <span style={{ fontWeight: 600 }}>{r.currency} {r.amount.toLocaleString()}</span>
