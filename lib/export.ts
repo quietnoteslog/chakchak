@@ -331,13 +331,14 @@ function cellValue(r: ExpenseRecord, key: string, index: number): string {
     case 'merchant': return `<span style="font-weight:600">${escapeHtml(r.merchant)}</span>`;
     case 'content': return escapeHtml(r.content || '-');
     case 'amount': {
-      const total = (r.amount ?? 0).toLocaleString('ko-KR');
+      const curr = r.currency && r.currency !== 'KRW' ? ` ${r.currency}` : '원';
+      const totalFmt = `${(r.amount ?? 0).toLocaleString('ko-KR')}${curr}`;
       if (r.vatAmount != null) {
         const supply = ((r.amount ?? 0) - r.vatAmount).toLocaleString('ko-KR');
         const vat = r.vatAmount.toLocaleString('ko-KR');
-        return `<span style="font-size:8.5px;color:#666;font-variant-numeric:tabular-nums;line-height:1.6">공급 ${supply}<br>세금 ${vat}<br></span>${total}`;
+        return `<span style="font-size:8.5px;color:#666;font-variant-numeric:tabular-nums;line-height:1.6">공급 ${supply}<br>세금 ${vat}<br></span>${totalFmt}`;
       }
-      return total;
+      return totalFmt;
     }
     case 'paymentType': return `${escapeHtml(r.paymentType || '')}${r.paymentCardLabel ? `<br><span style="font-size:9px;color:#888">${escapeHtml(r.paymentCardLabel)}</span>` : ''}`;
     case 'payer': return escapeHtml(r.payerName || r.createdByName || '-');
@@ -380,13 +381,14 @@ function renderRecordCard(r: ExpenseRecord, index: number, imgDataUrl: string | 
           ${showNo ? `<div class="rp-no">#${no}</div>` : ''}
           ${showMerchant ? `<div class="rp-merchant">${escapeHtml(r.merchant)}</div>` : '<div class="rp-merchant"></div>'}
           ${showAmount ? (() => {
+            const curr = r.currency && r.currency !== 'KRW' ? ` ${r.currency}` : '원';
             if (r.vatAmount != null) {
               const supply = ((r.amount ?? 0) - r.vatAmount).toLocaleString('ko-KR');
               const vat = r.vatAmount.toLocaleString('ko-KR');
               const total = (r.amount ?? 0).toLocaleString('ko-KR');
-              return `<div class="rp-amount"><span style="font-size:9px;font-weight:400;color:#666">공급 ${supply} / 세금 ${vat}<br></span>${total}원</div>`;
+              return `<div class="rp-amount"><span style="font-size:9px;font-weight:400;color:#666">공급 ${supply} / 세금 ${vat}<br></span>${total}${curr}</div>`;
             }
-            return `<div class="rp-amount">${(r.amount ?? 0).toLocaleString('ko-KR')}원</div>`;
+            return `<div class="rp-amount">${(r.amount ?? 0).toLocaleString('ko-KR')}${curr}</div>`;
           })() : ''}
         </div>
         ${detailCols.length > 0 ? `<div class="rp-details">${detailHtml}</div>` : ''}
